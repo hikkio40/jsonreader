@@ -289,19 +289,18 @@ async function renderVolumePage(volumeId, seriesId) {
                     chapterSection.appendChild(p);
                 } else if (item.gambar) {
                     const img = document.createElement('img');
-                    // *** PERBAIKAN UTAMA DI SINI ***
-                    // Membangun path gambar: "images/" + seriesId + "/" + nama_file_gambar
-                    // item.gambar di JSON sekarang diharapkan hanya berisi "nama-seri/nama-file.jpg"
-                    // Contoh: "pahlawan-barat/scene-desa.jpg"
-                    const fullImagePathInJson = item.gambar; // Ini akan menjadi "pahlawan-barat/scene-desa.jpg"
-                    // Kita perlu memastikan path relatif dari root proyek
-                    img.src = `images/${fullImagePathInJson}`; // Ini akan menjadi images/pahlawan-barat/scene-desa.jpg
+                    const fullImagePathInJson = item.gambar;
+                    img.src = `images/${fullImagePathInJson}`; // Path yang benar
                     img.alt = item.caption || 'Gambar ilustrasi';
+                    
+                    // *** PERUBAHAN DI SINI: Logging URL yang GAGAL dimuat ***
                     img.onerror = function() {
-                        this.onerror=null;
-                        this.src='https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan';
-                        console.error(`Gagal memuat gambar: ${img.src}`);
+                        const failedSrc = this.src; // Tangkap URL yang gagal *sebelum* diubah
+                        this.onerror = null; // Mencegah loop tak terbatas jika fallback juga gagal
+                        this.src = 'https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan'; // Set ke placeholder
+                        console.error(`Gagal memuat gambar: ${failedSrc}. Menggunakan placeholder.`);
                     };
+
                     chapterSection.appendChild(img);
                     if (item.caption) {
                         const caption = document.createElement('p');
