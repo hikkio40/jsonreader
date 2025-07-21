@@ -178,18 +178,43 @@ body {
     display: block; /* Tampilkan hanya bab yang aktif */
 }
 
+/* Overlay untuk menu hamburger */
+.toc-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Warna gelap transparan */
+    z-index: 40; /* Di bawah header, di atas konten */
+    display: none; /* Sembunyikan secara default */
+}
+.toc-panel-overlay.active {
+    display: block; /* Tampilkan saat aktif */
+}
+
+
 /* Responsiveness for smaller screens */
-@media (max-width: 768px) {
+@media (max-width: 1023px) { /* Menggunakan max-width: 1023px untuk breakpoint lg:hidden */
     .volume-reader-layout {
         flex-direction: column; /* Stack panels vertically on small screens */
         padding: 0.5rem;
     }
     .toc-panel {
-        position: static; /* Remove sticky positioning */
-        width: 100%;
+        position: fixed; /* Ubah posisi menjadi fixed */
+        top: 0;
+        left: -260px; /* Sembunyikan di luar layar */
+        width: 250px; /* Lebar menu */
+        height: 100%; /* Tinggi penuh */
         margin-right: 0;
-        margin-bottom: 1rem; /* Add margin below TOC when stacked */
-        max-height: none; /* Remove max-height */
+        margin-bottom: 0; /* Hapus margin bawah */
+        max-height: 100vh; /* Pastikan tinggi penuh viewport */
+        z-index: 50; /* Di atas overlay */
+        transition: left 0.3s ease-in-out; /* Animasi geser */
+        box-shadow: 2px 0 5px rgba(0,0,0,0.2); /* Tambah shadow */
+    }
+    .toc-panel.active {
+        left: 0; /* Tampilkan menu */
     }
     .content-panel {
         width: 100%;
