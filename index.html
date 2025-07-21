@@ -6,14 +6,22 @@
     <title>Digital Library JSON</title>
     <!-- Memuat Tailwind CSS dari CDN untuk styling dasar -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Font Awesome untuk ikon hamburger -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Memuat file CSS eksternal -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-white text-gray-900">
     <!-- Header -->
-    <header class="bg-white py-4 border-b border-gray-200 no-shadow">
-        <div class="container mx-auto px-4">
-            <h1 class="text-2xl font-bold text-center">Digital Library JSON</h1>
+    <header id="main-header" class="bg-white py-4 border-b border-gray-200 no-shadow sticky top-0 z-50">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <!-- Tombol Hamburger Menu (Hanya terlihat di mobile) -->
+            <button id="hamburger-menu-button" class="lg:hidden text-gray-800 focus:outline-none">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <h1 class="text-2xl font-bold text-center flex-grow">Digital Library JSON</h1>
+            <!-- Placeholder untuk menyelaraskan layout di desktop, atau bisa diisi dengan fitur lain -->
+            <div class="w-8 lg:hidden"></div> 
         </div>
     </header>
 
