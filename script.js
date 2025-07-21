@@ -9,18 +9,28 @@ async function fetchData(url) {
     try {
         const response = await fetch(url);
         if (!response.ok) {
+            // Jika respons bukan OK (misalnya 404 Not Found, 500 Internal Server Error)
             throw new Error(`HTTP error! status: ${response.status} from ${url}`);
         }
+
+        // Cek Content-Type untuk memastikan ini adalah JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const textResponse = await response.text();
+            console.error(`Expected JSON, but received Content-Type: ${contentType}. Response text (first 500 chars):`, textResponse.substring(0, 500) + '...');
+            throw new Error(`Invalid content type. Expected JSON for ${url}.`);
+        }
+
         return await response.json();
     } catch (error) {
         console.error("Gagal mengambil data:", error);
-        // Menampilkan pesan error di UI jika fetch gagal
         const mainContent = document.getElementById('main-content');
         mainContent.innerHTML = `
             <div class="container mx-auto px-4 py-8 text-center text-red-600">
-                <p>Maaf, terjadi kesalahan saat memuat data.</p>
-                <p>Silakan coba lagi nanti atau periksa koneksi internet Anda.</p>
-                <p>Detail Error: ${error.message}</p>
+                <p>Maaf, terjadi kesalahan saat memuat data dari <strong>${url}</strong>.</p>
+                <p>Pesan Error: ${error.message}</p>
+                <p>Pastikan file JSON ada di lokasi yang benar dan server web Anda berjalan dengan baik.</p>
+                <p>Jika Anda menjalankan ini secara lokal (misalnya, membuka file index.html langsung di browser), fungsi 'fetch' mungkin tidak dapat mengakses file lokal. Coba gunakan server web sederhana (misalnya, Python's 'http.server' atau 'serve' dari Node.js).</p>
             </div>
         `;
         return null; // Mengembalikan null agar fungsi pemanggil bisa menanganinya
@@ -61,7 +71,7 @@ function renderSeries(seriesData) {
         seriesCard.className = 'post-card no-shadow cursor-pointer';
         seriesCard.setAttribute('data-id', series.id);
 
-        // Perhatikan path cover: disesuaikan dengan struktur folder /covers/
+        // Path cover: disesuaikan dengan struktur folder /covers/ di root
         seriesCard.innerHTML = `
             <img src="covers/${series.cover.split('/').pop()}" alt="Cover ${series.judul}" class="w-full h-full object-cover no-shadow" onerror="this.onerror=null;this.src='https://placehold.co/400x600/CCCCCC/000000?text=No+Cover';">
             <div class="post-content">
@@ -152,7 +162,7 @@ async function renderDetailPage(seriesId) {
         volumeCard.className = 'post-card no-shadow cursor-pointer';
         volumeCard.setAttribute('data-id', volume.id);
 
-        // Perhatikan path cover: disesuaikan dengan struktur folder /covers/
+        // Path cover: disesuaikan dengan struktur folder /covers/ di root
         volumeCard.innerHTML = `
             <img src="covers/${volume.cover.split('/').pop()}" alt="Cover ${volume.judul}" class="w-full h-full object-cover no-shadow" onerror="this.onerror=null;this.src='https://placehold.co/400x600/CCCCCC/000000?text=No+Cover';">
             <div class="post-content">
@@ -242,7 +252,7 @@ async function renderVolumePage(volumeId, seriesId) {
             link.setAttribute('data-chapter-id', bab.id);
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                showChapter(bab.id); // Tidak perlu meneruskan volumeContent lagi
+                showChapter(bab.id);
             });
             listItem.appendChild(link);
             tocList.appendChild(listItem);
@@ -279,13 +289,19 @@ async function renderVolumePage(volumeId, seriesId) {
                     chapterSection.appendChild(p);
                 } else if (item.gambar) {
                     const img = document.createElement('img');
-                    // Perhatikan path gambar: disesuaikan dengan struktur folder /images/ atau /covers/
-                    // Untuk contoh ini, saya asumsikan images/ adalah di root atau relatif ke lokasi HTML
-                    // Jika gambar berada di dalam folder seri, path perlu disesuaikan: `/series/${seriesId}/images/${item.gambar.split('/').pop()}`
-                    // Untuk saat ini, saya akan pertahankan placeholder atau path relatif sederhana
-                    img.src = item.gambar || `https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan`;
+                    // *** PERBAIKAN UTAMA DI SINI ***
+                    // Membangun path gambar: "images/" + seriesId + "/" + nama_file_gambar
+                    // item.gambar di JSON sekarang diharapkan hanya berisi "nama-seri/nama-file.jpg"
+                    // Contoh: "pahlawan-barat/scene-desa.jpg"
+                    const fullImagePathInJson = item.gambar; // Ini akan menjadi "pahlawan-barat/scene-desa.jpg"
+                    // Kita perlu memastikan path relatif dari root proyek
+                    img.src = `images/${fullImagePathInJson}`; // Ini akan menjadi images/pahlawan-barat/scene-desa.jpg
                     img.alt = item.caption || 'Gambar ilustrasi';
-                    img.onerror = function() { this.onerror=null; this.src='https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan'; };
+                    img.onerror = function() {
+                        this.onerror=null;
+                        this.src='https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan';
+                        console.error(`Gagal memuat gambar: ${img.src}`);
+                    };
                     chapterSection.appendChild(img);
                     if (item.caption) {
                         const caption = document.createElement('p');
