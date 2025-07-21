@@ -312,8 +312,16 @@ async function renderVolumePage(volumeId, seriesId) {
     const volumeReaderLayout = document.createElement('div');
     volumeReaderLayout.className = 'volume-reader-layout';
 
+    // Tambahkan overlay untuk mobile
+    const tocPanelOverlay = document.createElement('div');
+    tocPanelOverlay.id = 'toc-panel-overlay';
+    tocPanelOverlay.className = 'toc-panel-overlay';
+    volumeReaderLayout.appendChild(tocPanelOverlay);
+
+
     // --- Panel Kiri: Daftar Isi (Table of Contents) ---
     const tocPanel = document.createElement('div');
+    tocPanel.id = 'toc-panel'; // Tambahkan ID
     tocPanel.className = 'toc-panel no-shadow';
     tocPanel.innerHTML = `
         <h3>Daftar Isi</h3>
@@ -333,6 +341,10 @@ async function renderVolumePage(volumeId, seriesId) {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 showChapter(bab.id, seriesId); // Meneruskan seriesId
+                // Tutup menu hamburger setelah memilih bab di mobile
+                if (window.innerWidth <= 1023) { // Sesuaikan dengan breakpoint lg:hidden
+                    toggleTocPanel(false);
+                }
             });
             listItem.appendChild(link);
             tocList.appendChild(listItem);
@@ -344,10 +356,10 @@ async function renderVolumePage(volumeId, seriesId) {
     const contentPanel = document.createElement('div');
     contentPanel.className = 'content-panel no-shadow';
     
+    // Menghapus teks placeholder "Pilih bab dari daftar isi."
     contentPanel.innerHTML = `
         <div id="chapter-content-container">
             <!-- Konten bab individual akan dirender di sini -->
-            <p class="text-center py-4">Pilih bab dari daftar isi.</p>
         </div>
     `;
 
@@ -367,11 +379,39 @@ async function renderVolumePage(volumeId, seriesId) {
     volumeReaderLayout.appendChild(contentPanel);
     mainContent.appendChild(volumeReaderLayout);
 
+    // Tambahkan event listener untuk tombol hamburger setelah elemen ada di DOM
+    const hamburgerButton = document.getElementById('hamburger-menu-button');
+    if (hamburgerButton) {
+        hamburgerButton.onclick = () => toggleTocPanel(true);
+    }
+    // Tambahkan event listener untuk overlay
+    tocPanelOverlay.onclick = () => toggleTocPanel(false);
+
+
     // Tampilkan bab pertama secara default setelah layout dimuat
     if (currentVolumeMetadata.bab && currentVolumeMetadata.bab.length > 0) {
         showChapter(currentVolumeMetadata.bab[0].id, seriesId);
     }
 }
+
+// Fungsi untuk mengaktifkan/menonaktifkan panel daftar isi (untuk mobile)
+function toggleTocPanel(show) {
+    const tocPanel = document.getElementById('toc-panel');
+    const tocPanelOverlay = document.getElementById('toc-panel-overlay');
+
+    if (tocPanel && tocPanelOverlay) {
+        if (show) {
+            tocPanel.classList.add('active');
+            tocPanelOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Mencegah scroll body saat menu terbuka
+        } else {
+            tocPanel.classList.remove('active');
+            tocPanelOverlay.classList.remove('active');
+            document.body.style.overflow = ''; // Mengembalikan scroll body
+        }
+    }
+}
+
 
 // Panggil fungsi renderHomePage saat DOM selesai dimuat untuk menampilkan homepage pertama kali
 document.addEventListener('DOMContentLoaded', renderHomePage);
