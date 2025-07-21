@@ -1,0 +1,26 @@
+[
+  {
+    "id": "pahlawan-barat",
+    "judul": "Pahlawan Barat",
+    "cover": "pahlawan-barat.jpg",
+    "kategori": "Fantasi",
+    "jumlah_volume": 5,
+    "deskripsi": "Sebuah seri fantasi epik tentang petualangan Raka di dunia barat yang penuh misteri dan bahaya."
+  },
+  {
+    "id": "petualang-galaksi",
+    "judul": "Petualang Galaksi",
+    "cover": "galaksi.jpg",
+    "kategori": "Sci-fi",
+    "jumlah_volume": 3,
+    "deskripsi": "Ikuti kisah petualangan luar angkasa yang mendebarkan melintasi galaksi yang belum terjamah."
+  },
+  {
+    "id": "misteri-desa-terpencil",
+    "judul": "Misteri Desa Terpencil",
+    "cover": "misteri-desa-terpencil.jpg",
+    "kategori": "Misteri",
+    "jumlah_volume": 2,
+    "deskripsi": "Serangkaian kejadian aneh mengguncang kedamaian sebuah desa terpencil, mengungkap rahasia kelam."
+  }
+]
