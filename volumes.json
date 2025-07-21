@@ -1,0 +1,23 @@
+[
+  {
+    "id": "volume1",
+    "judul": "Awal Petualangan",
+    "cover": "volume1.jpg",
+    "deskripsi": "Perkenalan karakter dan dunia cerita, dengan Raka memulai perjalanan tak terduga.",
+    "file": "volume1.json"
+  },
+  {
+    "id": "volume2",
+    "judul": "Bayangan Musuh",
+    "cover": "volume2.jpg",
+    "deskripsi": "Konflik dan misteri mulai muncul, saat Raka menghadapi ancaman baru.",
+    "file": "volume2.json"
+  },
+  {
+    "id": "volume3",
+    "judul": "Kebangkitan Kuno",
+    "cover": "volume3.jpg",
+    "deskripsi": "Kekuatan kuno bangkit, menguji batas kemampuan para pahlawan.",
+    "file": "volume3.json"
+  }
+]
