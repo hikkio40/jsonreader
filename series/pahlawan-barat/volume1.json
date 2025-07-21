@@ -6,49 +6,12 @@
     {
       "id": "bab1",
       "judul": "Bangun di Tengah Malam",
-      "konten": [
-        {
-          "paragraf": "Langit malam menyelimuti desa kecil dengan sunyi yang mencekam."
-        },
-        {
-          "gambar": "pahlawan-barat/scene-desa.jpg",
-          "caption": "Desa yang diselimuti kegelapan malam."
-        },
-        {
-          "paragraf": "Dia bangkit dari tempat tidur, melangkah pelan menuju jendela."
-        },
-        {
-          "kutipan": "Kadang, gelap bukan hanya milik malam—tapi juga hati yang menyimpan rahasia."
-        },
-        {
-          "dialog": [
-            { "karakter": "Ibu", "ucapan": "Kamu baik-baik saja, Nak?" },
-            { "karakter": "Raka", "ucapan": "Aku mimpi sesuatu yang terasa nyata." }
-          ]
-        },
-        {
-          "paragraf": "Raka tahu itu bukan mimpi buruk biasa."
-        }
-      ]
+      "file": "bab1.json" 
     },
     {
       "id": "bab2",
       "judul": "Pertemuan Rahasia",
-      "konten": [
-        {
-          "paragraf": "Di balik bukit utara, tiga sosok berjubah berkumpul dalam keheningan."
-        },
-        {
-          "gambar": "pahlawan-barat/scene-desa.jpg",
-          "caption": "Pertemuan rahasia di bawah rembulan."
-        },
-        {
-          "kutipan": "Misi kita tidak akan gagal lagi. Malam ini adalah permulaan."
-        },
-        {
-          "paragraf": "Mereka membahas ramalan kuno dan tanda-tanda yang mulai muncul."
-        }
-      ]
+      "file": "bab2.json"
     }
   ]
 }
