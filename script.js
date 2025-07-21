@@ -2,7 +2,8 @@
 let seriesIndexData = [];
 let currentSeriesInfo = null;
 let currentSeriesVolumes = [];
-let currentVolumeContent = null;
+let currentVolumeMetadata = null; // Mengganti currentVolumeContent untuk menyimpan metadata volume (daftar bab)
+let chapterContentCache = {}; // Cache untuk menyimpan konten bab yang sudah dimuat
 
 // Fungsi utilitas untuk mengambil data JSON dari URL
 async function fetchData(url) {
@@ -177,8 +178,8 @@ async function renderDetailPage(seriesId) {
     });
 }
 
-// Fungsi untuk menampilkan bab yang dipilih
-function showChapter(chapterId) {
+// Fungsi untuk menampilkan bab yang dipilih dan memuat kontennya
+async function showChapter(chapterId, seriesId) {
     // Sembunyikan semua bab
     document.querySelectorAll('.chapter-content-section').forEach(section => {
         section.classList.remove('active');
@@ -189,32 +190,111 @@ function showChapter(chapterId) {
     });
 
     // Tampilkan bab yang dipilih
-    const activeChapter = document.getElementById(`chapter-content-${chapterId}`);
-    if (activeChapter) {
-        activeChapter.classList.add('active');
+    const activeChapterSection = document.getElementById(`chapter-content-${chapterId}`);
+    if (activeChapterSection) {
+        activeChapterSection.classList.add('active');
     }
     // Tambahkan kelas aktif ke link daftar isi yang sesuai
     const activeLink = document.querySelector(`.toc-panel a[data-chapter-id="${chapterId}"]`);
     if (activeLink) {
         activeLink.classList.add('active-tab');
     }
+
+    // Dapatkan metadata bab dari currentVolumeMetadata
+    const chapterMetadata = currentVolumeMetadata.bab.find(b => b.id === chapterId);
+    if (!chapterMetadata) {
+        console.error(`Metadata bab dengan ID ${chapterId} tidak ditemukan.`);
+        activeChapterSection.innerHTML = `<p class="text-center text-red-600">Konten bab tidak ditemukan.</p>`;
+        return;
+    }
+
+    // Periksa cache terlebih dahulu
+    if (chapterContentCache[chapterId]) {
+        renderChapterContent(activeChapterSection, chapterContentCache[chapterId], seriesId);
+        return;
+    }
+
+    // Tampilkan loading indicator di dalam section bab
+    activeChapterSection.innerHTML = `<h3>${chapterMetadata.judul}</h3><p class="text-center py-4">Memuat konten bab...</p>`;
+
+    // Ambil konten bab dari file JSON terpisah
+    const chapterFilePath = `/series/${seriesId}/chapters/${chapterMetadata.file}`;
+    const chapterContent = await fetchData(chapterFilePath);
+
+    if (chapterContent) {
+        chapterContentCache[chapterId] = chapterContent; // Simpan ke cache
+        renderChapterContent(activeChapterSection, chapterContent, seriesId);
+    } else {
+        activeChapterSection.innerHTML = `<h3>${chapterMetadata.judul}</h3><p class="text-center text-red-600">Gagal memuat konten bab.</p>`;
+    }
 }
+
+// Fungsi untuk merender konten bab ke dalam section yang diberikan
+function renderChapterContent(chapterSectionElement, chapterContentData, seriesId) {
+    chapterSectionElement.innerHTML = `<h3>${chapterContentData.judul}</h3>`; // Pastikan judul bab diatur
+
+    chapterContentData.konten.forEach(item => {
+        if (item.paragraf) {
+            const p = document.createElement('p');
+            p.textContent = item.paragraf;
+            chapterSectionElement.appendChild(p);
+        } else if (item.gambar) {
+            const img = document.createElement('img');
+            const fullImagePathInJson = item.gambar;
+            img.src = `images/${fullImagePathInJson}`; // Path yang benar
+            img.alt = item.caption || 'Gambar ilustrasi';
+            
+            img.onerror = function() {
+                const failedSrc = this.src;
+                this.onerror = null;
+                this.src = 'https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan';
+                console.error(`Gagal memuat gambar: ${failedSrc}. Menggunakan placeholder.`);
+            };
+
+            chapterSectionElement.appendChild(img);
+            if (item.caption) {
+                const caption = document.createElement('p');
+                caption.className = 'text-center text-sm text-gray-500 mt-2 mb-4';
+                caption.textContent = item.caption;
+                chapterSectionElement.appendChild(caption);
+            }
+        } else if (item.kutipan) {
+            const blockquote = document.createElement('blockquote');
+            blockquote.className = 'quote';
+            blockquote.textContent = item.kutipan;
+            chapterSectionElement.appendChild(blockquote);
+        } else if (item.dialog) {
+            const dialogBox = document.createElement('div');
+            dialogBox.className = 'dialog-box';
+            item.dialog.forEach(line => {
+                const p = document.createElement('p');
+                p.innerHTML = `<strong>${line.karakter}:</strong> ${line.ucapan}`;
+                dialogBox.appendChild(p);
+            });
+            chapterSectionElement.appendChild(dialogBox);
+        }
+    });
+}
+
 
 // Fungsi untuk merender tampilan baca volume
 async function renderVolumePage(volumeId, seriesId) {
     const mainContent = document.getElementById('main-content');
     mainContent.innerHTML = `
-        <div class="container mx-auto px-4 py-8 text-center">Memuat konten volume...</div>
+        <div class="container mx-auto px-4 py-8 text-center">Memuat metadata volume...</div>
     `;
 
-    // Path ke file JSON volume
-    const volumeFilePath = `/series/${seriesId}/${volumeId}.json`;
-    currentVolumeContent = await fetchData(volumeFilePath);
+    // Path ke file JSON metadata volume (misal: volume1.json)
+    const volumeMetadataPath = `/series/${seriesId}/${volumeId}.json`;
+    currentVolumeMetadata = await fetchData(volumeMetadataPath); // Sekarang ini hanya metadata bab
 
-    if (!currentVolumeContent) {
+    if (!currentVolumeMetadata) {
         // Error sudah ditangani di fetchData, cukup return
         return;
     }
+
+    // Reset cache bab untuk volume baru
+    chapterContentCache = {};
 
     mainContent.innerHTML = ''; // Bersihkan loading indicator
 
@@ -241,10 +321,10 @@ async function renderVolumePage(volumeId, seriesId) {
     `;
     const tocList = tocPanel.querySelector('#toc-list');
 
-    if (!currentVolumeContent.bab || currentVolumeContent.bab.length === 0) {
+    if (!currentVolumeMetadata.bab || currentVolumeMetadata.bab.length === 0) {
         tocList.innerHTML = `<li><p class="text-gray-500">Tidak ada bab.</p></li>`;
     } else {
-        currentVolumeContent.bab.forEach(bab => {
+        currentVolumeMetadata.bab.forEach(bab => {
             const listItem = document.createElement('li');
             const link = document.createElement('a');
             link.href = '#';
@@ -252,7 +332,7 @@ async function renderVolumePage(volumeId, seriesId) {
             link.setAttribute('data-chapter-id', bab.id);
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                showChapter(bab.id);
+                showChapter(bab.id, seriesId); // Meneruskan seriesId
             });
             listItem.appendChild(link);
             tocList.appendChild(listItem);
@@ -267,63 +347,19 @@ async function renderVolumePage(volumeId, seriesId) {
     contentPanel.innerHTML = `
         <div id="chapter-content-container">
             <!-- Konten bab individual akan dirender di sini -->
+            <p class="text-center py-4">Pilih bab dari daftar isi.</p>
         </div>
     `;
 
     const chapterContentContainer = contentPanel.querySelector('#chapter-content-container');
-
-    if (!currentVolumeContent.bab || currentVolumeContent.bab.length === 0) {
-        chapterContentContainer.innerHTML = `<p class="text-center text-gray-500">Konten bab tidak tersedia.</p>`;
-    } else {
-        currentVolumeContent.bab.forEach(bab => {
+    
+    // Siapkan section untuk setiap bab, tetapi biarkan kosong sampai dimuat
+    if (currentVolumeMetadata.bab && currentVolumeMetadata.bab.length > 0) {
+        currentVolumeMetadata.bab.forEach(bab => {
             const chapterSection = document.createElement('section');
             chapterSection.id = `chapter-content-${bab.id}`;
             chapterSection.className = 'chapter-content-section';
-            
-            chapterSection.innerHTML = `<h3>${bab.judul}</h3>`;
-
-            bab.konten.forEach(item => {
-                if (item.paragraf) {
-                    const p = document.createElement('p');
-                    p.textContent = item.paragraf;
-                    chapterSection.appendChild(p);
-                } else if (item.gambar) {
-                    const img = document.createElement('img');
-                    const fullImagePathInJson = item.gambar;
-                    img.src = `images/${fullImagePathInJson}`; // Path yang benar
-                    img.alt = item.caption || 'Gambar ilustrasi';
-                    
-                    // *** PERUBAHAN DI SINI: Logging URL yang GAGAL dimuat ***
-                    img.onerror = function() {
-                        const failedSrc = this.src; // Tangkap URL yang gagal *sebelum* diubah
-                        this.onerror = null; // Mencegah loop tak terbatas jika fallback juga gagal
-                        this.src = 'https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan'; // Set ke placeholder
-                        console.error(`Gagal memuat gambar: ${failedSrc}. Menggunakan placeholder.`);
-                    };
-
-                    chapterSection.appendChild(img);
-                    if (item.caption) {
-                        const caption = document.createElement('p');
-                        caption.className = 'text-center text-sm text-gray-500 mt-2 mb-4';
-                        caption.textContent = item.caption;
-                        chapterSection.appendChild(caption);
-                    }
-                } else if (item.kutipan) {
-                    const blockquote = document.createElement('blockquote');
-                    blockquote.className = 'quote';
-                    blockquote.textContent = item.kutipan;
-                    chapterSection.appendChild(blockquote);
-                } else if (item.dialog) {
-                    const dialogBox = document.createElement('div');
-                    dialogBox.className = 'dialog-box';
-                    item.dialog.forEach(line => {
-                        const p = document.createElement('p');
-                        p.innerHTML = `<strong>${line.karakter}:</strong> ${line.ucapan}`;
-                        dialogBox.appendChild(p);
-                    });
-                    chapterSection.appendChild(dialogBox);
-                }
-            });
+            // Konten akan dimuat nanti oleh showChapter
             chapterContentContainer.appendChild(chapterSection);
         });
     }
@@ -331,9 +367,9 @@ async function renderVolumePage(volumeId, seriesId) {
     volumeReaderLayout.appendChild(contentPanel);
     mainContent.appendChild(volumeReaderLayout);
 
-    // Tampilkan bab pertama secara default
-    if (currentVolumeContent.bab.length > 0) {
-        showChapter(currentVolumeContent.bab[0].id);
+    // Tampilkan bab pertama secara default setelah layout dimuat
+    if (currentVolumeMetadata.bab && currentVolumeMetadata.bab.length > 0) {
+        showChapter(currentVolumeMetadata.bab[0].id, seriesId);
     }
 }
 
