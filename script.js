@@ -88,43 +88,48 @@ const uiService = {
 
     renderMainMenuSidebar() {
         DOMElements.sidebarTitle.textContent = 'Website Saya';
+        // Memisahkan menu utama dan menu pengaturan ke dalam dua ul terpisah
         DOMElements.sidebarMenu.innerHTML = `
-            <li class="sidebar-menu-item">
-                <a href="#" onclick="navigationService.renderHomepage()" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons text-xl flex-shrink-0">home</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Beranda</span>
-                </a>
-            </li>
-            <li class="sidebar-menu-item">
-                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons text-xl flex-shrink-0">favorite</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Favorit</span>
-                </a>
-            </li>
-            <li class="sidebar-menu-item">
-                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons text-xl flex-shrink-0">category</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Kategori</span>
-                </a>
-            </li>
-            <li class="sidebar-menu-item">
-                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons text-xl flex-shrink-0">perm_media</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Media</span>
-                </a>
-            </li>
-            <li class="sidebar-menu-item">
-                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons text-xl flex-shrink-0">people</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengguna</span>
-                </a>
-            </li>
-            <li class="sidebar-menu-item mt-auto">
-                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons text-xl flex-shrink-0">settings</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengaturan</span>
-                </a>
-            </li>
+            <ul class="space-y-2">
+                <li class="sidebar-menu-item">
+                    <a href="#" onclick="navigationService.renderHomepage()" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                        <span class="material-icons text-xl flex-shrink-0">home</span>
+                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Beranda</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                        <span class="material-icons text-xl flex-shrink-0">favorite</span>
+                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Favorit</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                        <span class="material-icons text-xl flex-shrink-0">category</span>
+                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Kategori</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                        <span class="material-icons text-xl flex-shrink-0">perm_media</span>
+                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Media</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                        <span class="material-icons text-xl flex-shrink-0">people</span>
+                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengguna</span>
+                    </a>
+                </li>
+            </ul>
+            <ul class="space-y-2 mt-auto"> <!-- ul terpisah untuk Pengaturan -->
+                <li class="sidebar-menu-item">
+                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                        <span class="material-icons text-xl flex-shrink-0">settings</span>
+                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengaturan</span>
+                    </a>
+                </li>
+            </ul>
         `;
     },
 
