@@ -21,27 +21,88 @@ const appState = {
     currentVolumeData: null,   // Menyimpan data volume saat ini
 };
 
-// --- Data Service: Mengelola pengambilan data JSON ---
+// --- Utility Functions ---
+
+/**
+ * Fungsi debounce untuk membatasi seberapa sering suatu fungsi dipanggil.
+ * Berguna untuk event seperti resize atau scroll.
+ * @param {Function} func - Fungsi yang akan di-debounce.
+ * @param {number} delay - Waktu tunda dalam milidetik.
+ * @returns {Function} Fungsi yang di-debounce.
+ */
+const debounce = (func, delay) => {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+};
+
+// --- Data Service: Mengelola pengambilan data JSON dan caching ---
 const dataService = {
+    // Prefix untuk kunci Local Storage agar tidak bentrok dengan aplikasi lain
+    CACHE_PREFIX: 'app_data_cache_',
+
+    /**
+     * Mengambil data JSON dari cache Local Storage.
+     * @param {string} key - Kunci untuk data di Local Storage.
+     * @returns {Object|null} Data dari cache atau null jika tidak ada/error.
+     */
+    getCache(key) {
+        try {
+            const cachedData = localStorage.getItem(this.CACHE_PREFIX + key);
+            return cachedData ? JSON.parse(cachedData) : null;
+        } catch (e) {
+            console.error('Error reading from cache:', e);
+            localStorage.removeItem(this.CACHE_PREFIX + key); // Hapus cache yang rusak
+            return null;
+        }
+    },
+
+    /**
+     * Menyimpan data JSON ke cache Local Storage.
+     * @param {string} key - Kunci untuk data di Local Storage.
+     * @param {Object} data - Data yang akan disimpan.
+     */
+    setCache(key, data) {
+        try {
+            localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(data));
+        } catch (e) {
+            console.error('Error writing to cache:', e);
+            // Mungkin Local Storage penuh, atau ada masalah lain
+        }
+    },
+
     /**
      * Mengambil data JSON dari path yang diberikan.
+     * Prioritas: Cache Local Storage -> Network.
      * Menangani penundaan jaringan dan penanganan error.
      * @param {string} path - Path relatif ke file JSON (misal: 'series/series-index.json').
      * @returns {Promise<Object|null>} Data JSON atau null jika gagal.
      */
     async fetchJson(path) {
+        const cacheKey = path; // Gunakan path sebagai kunci cache
+
+        // 1. Coba ambil dari cache
+        const cachedData = this.getCache(cacheKey);
+        if (cachedData) {
+            console.log(`Mengambil dari cache: ${path}`);
+            return cachedData;
+        }
+
+        // 2. Jika tidak ada di cache, ambil dari network
         try {
-            // Menggunakan jalur relatif karena file akan di-host bersama
+            console.log(`Mengambil dari network: ${path}`);
             const response = await fetch(path);
             if (!response.ok) {
-                // Jika respons bukan OK (misal: 404 Not Found), lemparkan error
                 throw new Error(`Gagal memuat ${path}: ${response.statusText}`);
             }
-            // Mengembalikan respons JSON
-            return await response.json();
+            const data = await response.json();
+            this.setCache(cacheKey, data); // Simpan ke cache
+            return data;
         } catch (error) {
             console.error('Error fetching JSON:', error);
-            // Mengganti pesan error menjadi lebih profesional dan umum
             DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
             return null;
         }
@@ -152,7 +213,7 @@ const uiService = {
             seriesHtml += `
                 <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.showSeriesDetail('${series.id}')">
                     <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden series-cover-placeholder">
-                        ${series.cover ? `<img src="${series.cover}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${series.cover ? `<img src="${series.cover}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
                     </div>
@@ -185,7 +246,7 @@ const uiService = {
             volumesHtml += `
                 <div class="cursor-pointer hover:opacity-80 transition-opacity volume-card" onclick="navigationService.showVolume('${appState.currentSeriesId}', '${volume.id}')">
                     <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 flex items-center justify-center overflow-hidden volume-cover-placeholder">
-                        ${volume.cover ? `<img src="${volume.cover}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${volume.cover ? `<img src="${volume.cover}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image" loading="lazy">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
                     </div>
@@ -207,7 +268,7 @@ const uiService = {
                     <!-- Poster -->
                     <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
-                            ${info.cover ? `<img src="${info.cover}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            ${info.cover ? `<img src="${info.cover}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                             </svg>`}
                         </div>
@@ -273,7 +334,7 @@ const uiService = {
             } else if (item.gambar) {
                 chapterContentHtml += `
                     <div class="my-6 text-center chapter-image-wrapper">
-                        <img src="${dataService.getChapterImagePath(appState.currentSeriesId, appState.currentVolumeId, item.gambar)}" alt="Gambar ilustrasi" class="max-w-full h-auto mx-auto rounded-lg shadow-md chapter-image">
+                        <img src="${dataService.getChapterImagePath(appState.currentSeriesId, appState.currentVolumeId, item.gambar)}" alt="Gambar ilustrasi" class="max-w-full h-auto mx-auto rounded-lg shadow-md chapter-image" loading="lazy">
                     </div>
                 `;
             } else if (item.kutipan) {
@@ -345,7 +406,6 @@ const navigationService = {
         uiService.renderMainMenuSidebar(); // Pastikan sidebar menampilkan menu utama
         
         app.checkMobile();
-        // uiService.showLoading(); // Dihapus, diganti dengan transisi
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
@@ -370,8 +430,6 @@ const navigationService = {
             DOMElements.mainContent.classList.add('ml-64');
         }
         DOMElements.overlay.classList.add('hidden');
-
-        // uiService.showLoading(); // Dihapus, diganti dengan transisi
 
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
@@ -404,8 +462,6 @@ const navigationService = {
         }
         DOMElements.overlay.classList.add('hidden');
 
-        // uiService.showLoading(); // Dihapus, diganti dengan transisi
-
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
         if (!volumeData) return;
 
@@ -434,7 +490,6 @@ const navigationService = {
         }
 
         uiService.setupVolumeSidebar(appState.currentVolumeChapters); // Perbarui sidebar untuk menyorot bab saat ini
-        // uiService.showLoading(); // Dihapus, diganti dengan transisi
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
         if (!chapterData) return;
@@ -507,8 +562,8 @@ const app = {
             }
         });
 
-        // Tangani perubahan ukuran jendela
-        window.addEventListener('resize', app.checkMobile);
+        // Tangani perubahan ukuran jendela dengan debounce
+        window.addEventListener('resize', debounce(app.checkMobile, 200)); // Debounce 200ms
 
         // Tutup sidebar pada tombol escape (perluas jika diciutkan)
         document.addEventListener('keydown', function(e) {
