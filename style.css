@@ -1,50 +1,41 @@
-/* Mengatur ulang box-shadow untuk semua elemen */
 * {
     box-shadow: none !important;
 }
-/* Membatasi teks ke dua baris dengan elipsis */
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
-/* Mengatur lebar sidebar saat diciutkan */
 .sidebar-collapsed {
     width: 64px !important;
 }
-/* Mengatur transisi untuk teks sidebar */
 .sidebar-text {
     transition: opacity 0.3s ease;
 }
-/* Menyembunyikan teks sidebar saat diciutkan */
 .sidebar-collapsed .sidebar-text {
     opacity: 0;
     pointer-events: none;
-    margin-left: 0 !important; /* Pastikan margin kiri dihilangkan saat teks tidak terlihat */
+    margin-left: 0 !important;
 }
 
-/* Perbaikan perataan ikon di header sidebar saat diciutkan */
 .sidebar-collapsed .sidebar-header-content {
-    justify-content: center; /* Pusatkan konten flex di dalam header */
-    gap: 0 !important; /* Hapus efek space-x-3 */
-    padding: 0 !important; /* Hapus padding horizontal dari header */
+    justify-content: center;
+    gap: 0 !important;
+    padding: 0 !important;
 }
-/* Menyesuaikan padding tombol toggle menu saat sidebar diciutkan */
 .sidebar-collapsed .sidebar-toggle-button {
-    padding: 16px !important; /* Sesuaikan padding agar ikon terpusat visual */
+    padding: 16px !important;
 }
 
-/* Perbaikan perataan ikon di item menu sidebar saat diciutkan */
 .sidebar-collapsed .sidebar-menu-item a {
-    display: flex; /* Jadikan tautan sebagai flex container */
-    justify-content: center; /* Pusatkan ikon secara horizontal */
-    align-items: center; /* Pusatkan ikon secara vertikal */
-    padding: 16px 0 !important; /* Sesuaikan padding vertikal, hapus horizontal */
-    width: 100%; /* Pastikan elemen mengambil lebar penuh dari li */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px 0 !important;
+    width: 100%;
 }
 
-/* Responsif untuk tampilan mobile */
 @media (max-width: 768px) {
     .sidebar-mobile-hidden {
         transform: translateX(-100%);
@@ -54,13 +45,11 @@
     }
 }
 
-/* Menambahkan transisi untuk konten dinamis */
 .dynamic-content-area {
     opacity: 1;
-    transition: opacity 0.3s ease-in-out; /* Transisi untuk efek fade */
+    transition: opacity 0.3s ease-in-out;
 }
 
-/* Kelas untuk menyembunyikan konten sementara sebelum memuat yang baru */
 .dynamic-content-area.fade-out {
     opacity: 0;
 }
