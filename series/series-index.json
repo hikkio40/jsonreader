@@ -2,15 +2,15 @@
   {
     "id": "doratama",
     "judul": "Reincarnated as a Dragon Hatchling",
-    "cover": "doratamav1.jpg",
+    "cover": "covers/doratamav1.jpg",
     "kategori": "Fantasi",
-    "jumlah_volume": 1,
+    "jumlah_volume": 1
   },
   {
     "id": "pahlawan-barat",
     "judul": "Pahlawan Barat",
-    "cover": "pahlawan-barat/scene-desa.jpg",
+    "cover": "covers/pahlawan-barat-detail.jpg",
     "kategori": "Fantasi",
-    "jumlah_volume": 2,
+    "jumlah_volume": 2
   }
 ]
