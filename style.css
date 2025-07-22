@@ -53,3 +53,21 @@
 .dynamic-content-area.fade-out {
     opacity: 0;
 }
+
+/* Penyesuaian untuk memposisikan "Pengaturan" di bagian bawah sidebar */
+.app-sidebar {
+    display: flex; /* Jadikan sidebar sebagai flex container */
+    flex-direction: column; /* Atur arah flex ke kolom */
+}
+
+.sidebar-nav {
+    flex-grow: 1; /* Biarkan nav mengambil semua ruang yang tersedia */
+    display: flex; /* Jadikan nav sebagai flex container */
+    flex-direction: column; /* Atur arah flex ke kolom */
+}
+
+#sidebarMenu {
+    display: flex; /* Jadikan ul sebagai flex container */
+    flex-direction: column; /* Atur arah flex ke kolom */
+    height: 100%; /* Pastikan ul mengisi tinggi penuh nav */
+}
