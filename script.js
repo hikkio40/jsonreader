@@ -1,4 +1,3 @@
-// Mendapatkan referensi elemen DOM
 const DOMElements = {
     sidebarToggle: document.getElementById('sidebarToggle'),
     sidebar: document.getElementById('sidebar'),
@@ -9,27 +8,17 @@ const DOMElements = {
     sidebarMenu: document.getElementById('sidebarMenu'),
 };
 
-// Objek state aplikasi terpusat
 const appState = {
     isCollapsed: false,
     isMobile: false,
-    currentView: 'home', // 'home', 'series-detail', 'volume-read'
+    currentView: 'home',
     currentSeriesId: null,
     currentVolumeId: null,
     currentChapterIndex: 0,
-    currentVolumeChapters: [], // Menyimpan daftar bab untuk navigasi
-    currentVolumeData: null,   // Menyimpan data volume saat ini
+    currentVolumeChapters: [],
+    currentVolumeData: null,
 };
 
-// --- Utility Functions ---
-
-/**
- * Fungsi debounce untuk membatasi seberapa sering suatu fungsi dipanggil.
- * Berguna untuk event seperti resize atau scroll.
- * @param {Function} func - Fungsi yang akan di-debounce.
- * @param {number} delay - Waktu tunda dalam milidetik.
- * @returns {Function} Fungsi yang di-debounce.
- */
 const debounce = (func, delay) => {
     let timeout;
     return function(...args) {
@@ -39,67 +28,43 @@ const debounce = (func, delay) => {
     };
 };
 
-// --- Data Service: Mengelola pengambilan data JSON dan caching ---
 const dataService = {
-    // Prefix untuk kunci Local Storage agar tidak bentrok dengan aplikasi lain
     CACHE_PREFIX: 'app_data_cache_',
 
-    /**
-     * Mengambil data JSON dari cache Local Storage.
-     * @param {string} key - Kunci untuk data di Local Storage.
-     * @returns {Object|null} Data dari cache atau null jika tidak ada/error.
-     */
     getCache(key) {
         try {
             const cachedData = localStorage.getItem(this.CACHE_PREFIX + key);
             return cachedData ? JSON.parse(cachedData) : null;
         } catch (e) {
             console.error('Error reading from cache:', e);
-            localStorage.removeItem(this.CACHE_PREFIX + key); // Hapus cache yang rusak
+            localStorage.removeItem(this.CACHE_PREFIX + key);
             return null;
         }
     },
 
-    /**
-     * Menyimpan data JSON ke cache Local Storage.
-     * @param {string} key - Kunci untuk data di Local Storage.
-     * @param {Object} data - Data yang akan disimpan.
-     */
     setCache(key, data) {
         try {
             localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(data));
         } catch (e) {
             console.error('Error writing to cache:', e);
-            // Mungkin Local Storage penuh, atau ada masalah lain
         }
     },
 
-    /**
-     * Mengambil data JSON dari path yang diberikan.
-     * Prioritas: Cache Local Storage -> Network.
-     * Menangani penundaan jaringan dan penanganan error.
-     * @param {string} path - Path relatif ke file JSON (misal: 'series/series-index.json').
-     * @returns {Promise<Object|null>} Data JSON atau null jika gagal.
-     */
     async fetchJson(path) {
-        const cacheKey = path; // Gunakan path sebagai kunci cache
+        const cacheKey = path;
 
-        // 1. Coba ambil dari cache
         const cachedData = this.getCache(cacheKey);
         if (cachedData) {
-            console.log(`Mengambil dari cache: ${path}`);
             return cachedData;
         }
 
-        // 2. Jika tidak ada di cache, ambil dari network
         try {
-            console.log(`Mengambil dari network: ${path}`);
             const response = await fetch(path);
             if (!response.ok) {
-                throw new Error(`Gagal memuat ${path}: ${response.statusText}`);
+                throw new Error(`Failed to load ${path}: ${response.statusText}`);
             }
             const data = await response.json();
-            this.setCache(cacheKey, data); // Simpan ke cache
+            this.setCache(cacheKey, data);
             return data;
         } catch (error) {
             console.error('Error fetching JSON:', error);
@@ -108,24 +73,19 @@ const dataService = {
         }
     },
 
-    /**
-     * Mendapatkan path lengkap untuk gambar bab.
-     * @param {string} seriesId - ID seri.
-     * @param {string} volumeId - ID volume.
-     * @param {string} imageName - Nama file gambar.
-     * @returns {string} Path lengkap ke gambar.
-     */
     getChapterImagePath(seriesId, volumeId, imageName) {
-        // Menggunakan jalur relatif untuk gambar
         return `images/${seriesId}/${volumeId}/${imageName}`;
     }
 };
 
-// --- UI Service: Mengelola rendering UI dan manipulasi DOM ---
 const uiService = {
-    /**
-     * Merender menu utama di sidebar.
-     */
+    async renderContentWithTransition(contentHtml) {
+        DOMElements.dynamicContent.classList.add('fade-out');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        DOMElements.dynamicContent.innerHTML = contentHtml;
+        DOMElements.dynamicContent.classList.remove('fade-out');
+    },
+
     renderMainMenuSidebar() {
         DOMElements.sidebarTitle.textContent = 'Website Saya';
         DOMElements.sidebarMenu.innerHTML = `
@@ -168,10 +128,6 @@ const uiService = {
         `;
     },
 
-    /**
-     * Merender daftar bab di sidebar untuk tampilan volume.
-     * @param {Array<Object>} chapters - Daftar objek bab.
-     */
     setupVolumeSidebar(chapters) {
         DOMElements.sidebarTitle.textContent = 'Daftar Isi Volume';
         let chaptersHtml = `
@@ -199,15 +155,7 @@ const uiService = {
         DOMElements.sidebarMenu.innerHTML = chaptersHtml;
     },
 
-    /**
-     * Merender konten halaman beranda (daftar seri).
-     * @param {Array<Object>} seriesIndex - Daftar objek seri.
-     */
     async renderHomepageContent(seriesIndex) {
-        // Tambahkan fade-out sebelum mengganti konten
-        DOMElements.dynamicContent.classList.add('fade-out');
-        await new Promise(resolve => setTimeout(resolve, 300)); // Tunggu transisi selesai
-
         let seriesHtml = ``;
         seriesIndex.forEach(series => {
             seriesHtml += `
@@ -222,25 +170,16 @@ const uiService = {
             `;
         });
 
-        DOMElements.dynamicContent.innerHTML = `
+        const contentHtml = `
             <h2 class="text-2xl font-semibold mb-8 page-title">Light Novel Terbaru</h2>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 series-grid">
                 ${seriesHtml}
             </div>
         `;
-        DOMElements.dynamicContent.classList.remove('fade-out'); // Hapus fade-out untuk efek fade-in
+        uiService.renderContentWithTransition(contentHtml);
     },
 
-    /**
-     * Merender konten halaman detail seri.
-     * @param {Object} info - Data info seri.
-     * @param {Array<Object>} volumes - Daftar objek volume.
-     */
     async renderSeriesDetailContent(info, volumes) {
-        // Tambahkan fade-out sebelum mengganti konten
-        DOMElements.dynamicContent.classList.add('fade-out');
-        await new Promise(resolve => setTimeout(resolve, 300)); // Tunggu transisi selesai
-
         let volumesHtml = '';
         volumes.forEach(volume => {
             volumesHtml += `
@@ -255,7 +194,7 @@ const uiService = {
             `;
         });
 
-        DOMElements.dynamicContent.innerHTML = `
+        const contentHtml = `
             <div class="mb-6">
                 <button onclick="navigationService.renderHomepage()" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-homepage-button">
                     <span class="material-icons mr-2">arrow_back</span>
@@ -263,9 +202,7 @@ const uiService = {
                 </button>
             </div>
             <div class="series-detail-container">
-                <!-- Bagian Header dengan Poster dan Info -->
                 <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
-                    <!-- Poster -->
                     <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
                             ${info.cover ? `<img src="${info.cover}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,7 +211,6 @@ const uiService = {
                         </div>
                     </div>
                     
-                    <!-- Bagian Info -->
                     <div class="flex-1 series-info-section">
                         <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
                         <div class="flex items-center gap-6 text-gray-600 mb-4 series-metadata">
@@ -296,7 +232,6 @@ const uiService = {
                             </div>
                         </div>
                         
-                        <!-- Sinopsis -->
                         <div class="series-synopsis">
                             <h3 class="text-xl font-semibold mb-3">Sinopsis</h3>
                             <p class="mb-4">${info.deskripsi}</p>
@@ -312,21 +247,10 @@ const uiService = {
                 </div>
             </div>
         `;
-        DOMElements.dynamicContent.classList.remove('fade-out'); // Hapus fade-out untuk efek fade-in
+        uiService.renderContentWithTransition(contentHtml);
     },
 
-    /**
-     * Merender konten bab.
-     * @param {Object} chapterData - Data bab yang akan dirender.
-     * @param {Object} volumeData - Data volume saat ini.
-     * @param {number} chapterIndex - Indeks bab saat ini.
-     * @param {number} totalChapters - Total bab dalam volume.
-     */
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
-        // Tambahkan fade-out sebelum mengganti konten
-        DOMElements.dynamicContent.classList.add('fade-out');
-        await new Promise(resolve => setTimeout(resolve, 300)); // Tunggu transisi selesai
-
         let chapterContentHtml = '';
         chapterData.konten.forEach(item => {
             if (item.paragraf) {
@@ -352,7 +276,6 @@ const uiService = {
             }
         });
         
-        // Tombol navigasi
         const prevButton = chapterIndex > 0 ? 
             `<button onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex - 1})" class="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded chapter-nav-button chapter-nav-prev">
                 <span class="material-icons mr-2">arrow_back</span>
@@ -365,7 +288,7 @@ const uiService = {
                 <span class="material-icons ml-2">arrow_forward</span>
             </button>` : '';
         
-        DOMElements.dynamicContent.innerHTML = `
+        const contentHtml = `
             <div class="chapter-navigation-top">
                 <button onclick="navigationService.showVolume('${appState.currentSeriesId}', '${appState.currentVolumeId}')" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-volume-button">
                     <span class="material-icons mr-2">arrow_back</span>
@@ -388,23 +311,18 @@ const uiService = {
                 </div>
             </div>
         `;
-        DOMElements.dynamicContent.classList.remove('fade-out'); // Hapus fade-out untuk efek fade-in
+        uiService.renderContentWithTransition(contentHtml);
     }
 };
 
-// --- Navigation Service: Mengelola transisi antar tampilan ---
 const navigationService = {
-    /**
-     * Merender halaman beranda.
-     */
     async renderHomepage() {
         appState.currentView = 'home';
         appState.currentSeriesId = null;
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        uiService.renderMainMenuSidebar(); // Pastikan sidebar menampilkan menu utama
-        
+        uiService.renderMainMenuSidebar();
         app.checkMobile();
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
@@ -413,17 +331,12 @@ const navigationService = {
         uiService.renderHomepageContent(seriesIndex);
     },
 
-    /**
-     * Menampilkan detail seri berdasarkan ID seri.
-     * @param {string} seriesId - ID seri yang akan ditampilkan.
-     */
     async showSeriesDetail(seriesId) {
         appState.currentView = 'series-detail';
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        // Memastikan sidebar terlihat untuk tampilan detail seri
         DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
         DOMElements.mainContent.classList.remove('main-mobile-full');
         if (!appState.isCollapsed) {
@@ -436,25 +349,18 @@ const navigationService = {
 
         if (!info || !volumes) return;
 
-        // Reset sidebar ke menu utama, lalu perbarui judul
-        uiService.renderMainMenuSidebar(); 
-        DOMElements.sidebarTitle.textContent = 'Detail Seri'; 
+        uiService.renderMainMenuSidebar();
+        DOMElements.sidebarTitle.textContent = 'Detail Seri';
 
         uiService.renderSeriesDetailContent(info, volumes);
     },
 
-    /**
-     * Menampilkan detail volume dan daftar babnya.
-     * @param {string} seriesId - ID seri.
-     * @param {string} volumeId - ID volume.
-     */
     async showVolume(seriesId, volumeId) {
         appState.currentView = 'volume-read';
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = volumeId;
-        appState.currentChapterIndex = 0; // Reset indeks bab saat masuk volume baru
+        appState.currentChapterIndex = 0;
 
-        // Memastikan sidebar terlihat untuk tampilan membaca
         DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
         DOMElements.mainContent.classList.remove('main-mobile-full');
         if (!appState.isCollapsed) {
@@ -465,31 +371,24 @@ const navigationService = {
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
         if (!volumeData) return;
 
-        // Simpan data bab dan volume secara global di state aplikasi
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
 
         uiService.setupVolumeSidebar(volumeData.bab);
-        navigationService.showChapter(seriesId, volumeId, 0); // Muat bab pertama secara default
+        navigationService.showChapter(seriesId, volumeId, 0);
     },
 
-    /**
-     * Menampilkan konten bab tertentu.
-     * @param {string} seriesId - ID seri.
-     * @param {string} volumeId - ID volume.
-     * @param {number} chapterIndex - Indeks bab yang akan ditampilkan.
-     */
     async showChapter(seriesId, volumeId, chapterIndex) {
         appState.currentChapterIndex = chapterIndex;
         const chapterInfo = appState.currentVolumeChapters[chapterIndex];
-        const volumeData = appState.currentVolumeData; // Ambil data volume dari state aplikasi
+        const volumeData = appState.currentVolumeData;
 
         if (!chapterInfo || !volumeData) {
             DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab atau data volume tidak ditemukan.</div>`;
             return;
         }
 
-        uiService.setupVolumeSidebar(appState.currentVolumeChapters); // Perbarui sidebar untuk menyorot bab saat ini
+        uiService.setupVolumeSidebar(appState.currentVolumeChapters);
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
         if (!chapterData) return;
@@ -498,12 +397,7 @@ const navigationService = {
     }
 };
 
-// --- App Core: Mengelola logika aplikasi umum dan event listener ---
 const app = {
-    /**
-     * Memeriksa apakah tampilan saat ini adalah mobile atau desktop.
-     * Menyesuaikan kelas CSS sidebar dan main content.
-     */
     checkMobile() {
         appState.isMobile = window.innerWidth < 768;
         if (appState.isMobile && appState.currentView === 'home') {
@@ -519,21 +413,16 @@ const app = {
         }
     },
 
-    /**
-     * Mengubah status sidebar (ciut/perluas).
-     */
     toggleSidebar() {
         if (appState.isMobile) {
-            // Perilaku mobile
             if (DOMElements.sidebar.classList.contains('sidebar-mobile-hidden')) {
                 DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
-                DOMElements.overlay.classList.add('hidden');
+                DOMElements.overlay.classList.remove('hidden');
             } else {
                 DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
                 DOMElements.overlay.classList.add('hidden');
             }
         } else {
-            // Perilaku desktop
             appState.isCollapsed = !appState.isCollapsed;
             
             if (appState.isCollapsed) {
@@ -548,13 +437,9 @@ const app = {
         }
     },
 
-    /**
-     * Mengatur semua event listener aplikasi.
-     */
     setupEventListeners() {
         DOMElements.sidebarToggle.addEventListener('click', app.toggleSidebar);
 
-        // Tutup sidebar saat mengklik overlay (mobile)
         DOMElements.overlay.addEventListener('click', function() {
             if (appState.isMobile) {
                 DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
@@ -562,10 +447,8 @@ const app = {
             }
         });
 
-        // Tangani perubahan ukuran jendela dengan debounce
-        window.addEventListener('resize', debounce(app.checkMobile, 200)); // Debounce 200ms
+        window.addEventListener('resize', debounce(app.checkMobile, 200));
 
-        // Tutup sidebar pada tombol escape (perluas jika diciutkan)
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 if (appState.isMobile && !DOMElements.sidebar.classList.contains('sidebar-mobile-hidden')) {
@@ -577,7 +460,6 @@ const app = {
             }
         });
 
-        // Inisialisasi halaman beranda saat dimuat
         document.addEventListener('DOMContentLoaded', function() {
             app.checkMobile();
             navigationService.renderHomepage();
@@ -585,5 +467,4 @@ const app = {
     }
 };
 
-// Memulai aplikasi
 app.setupEventListeners();
