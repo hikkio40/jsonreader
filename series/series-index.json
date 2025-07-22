@@ -4,13 +4,15 @@
     "judul": "Reincarnated as a Dragon Hatchling",
     "cover": "covers/doratamav1.jpg",
     "kategori": "Fantasi",
-    "jumlah_volume": 1
+    "jumlah_volume": 1,
+    "format": "Light Novel"
   },
   {
     "id": "pahlawan-barat",
     "judul": "Pahlawan Barat",
     "cover": "covers/pahlawan-barat-detail.jpg",
     "kategori": "Fantasi",
-    "jumlah_volume": 2
+    "jumlah_volume": 2,
+    "format": "Web Novel"
   }
 ]
