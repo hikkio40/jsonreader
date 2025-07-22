@@ -1,14 +1,12 @@
 const DOMElements = {
-    // sidebarToggle tidak lagi di DOM awal, akan diakses via event delegation atau setelah dibuat
+    sidebarToggle: document.getElementById('sidebarToggle'), // Kembali ke DOM statis
     sidebar: document.getElementById('sidebar'),
     mainContent: document.getElementById('mainContent'),
     dynamicContent: document.getElementById('dynamicContent'),
     overlay: document.getElementById('overlay'),
     sidebarTitle: document.getElementById('sidebarTitle'),
     sidebarMenu: document.getElementById('sidebarMenu'),
-    // mainHeader dan mainContentTitle akan diakses setelah dibuat secara dinamis
-    mainHeader: null,
-    mainContentTitle: null,
+    // mainHeader dan mainContentTitle tidak lagi diperlukan di DOMElements
 };
 
 const appState = {
@@ -89,24 +87,10 @@ const uiService = {
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
-    // Fungsi untuk membuat HTML header mobile
-    createMobileHeaderHtml(title = 'Beranda') {
-        return `
-            <header id="mainHeader" class="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 py-3 px-4 z-30 transition-all duration-300 ease-in-out flex items-center">
-                <button id="sidebarToggle" class="p-2 hover:bg-gray-100 rounded md:hidden">
-                    <span class="material-icons text-xl">menu</span>
-                </button>
-                <h2 id="mainContentTitle" class="text-xl font-semibold ml-4 md:ml-0">${title}</h2>
-            </header>
-        `;
-    },
-
-    // Fungsi untuk mengatur judul header utama (mobile)
-    setMainContentTitle(title) {
-        if (DOMElements.mainContentTitle) { // Pastikan elemen ada
-            DOMElements.mainContentTitle.textContent = title;
-        }
-    },
+    // Fungsi ini tidak lagi diperlukan karena judul akan ada di dalam konten
+    // setMainContentTitle(title) {
+    //     // DOMElements.mainContentTitle tidak lagi ada
+    // },
 
     renderMainMenuSidebar() {
         DOMElements.sidebarTitle.textContent = 'Website Saya';
@@ -215,7 +199,6 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
-        uiService.setMainContentTitle('Beranda');
     },
 
     async renderSeriesDetailContent(info, volumes) {
@@ -287,7 +270,6 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
-        uiService.setMainContentTitle(info.judul);
     },
 
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
@@ -352,7 +334,6 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
-        uiService.setMainContentTitle(chapterData.judul);
     }
 };
 
@@ -437,31 +418,19 @@ const app = {
             DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
             DOMElements.mainContent.classList.add('main-mobile-full');
             DOMElements.overlay.classList.add('hidden');
-            DOMElements.mainContent.style.paddingTop = '56px'; // Tambahkan padding untuk header mobile
-            
-            // Buat dan tambahkan mainHeader jika belum ada
-            if (!DOMElements.mainHeader) {
-                const headerHtml = uiService.createMobileHeaderHtml(uiService.setMainContentTitle.currentTitle || 'Beranda');
-                DOMElements.mainContent.insertAdjacentHTML('beforebegin', headerHtml); // Tambahkan sebelum mainContent
-                // Perbarui referensi DOM setelah elemen dibuat
-                DOMElements.mainHeader = document.getElementById('mainHeader');
-                DOMElements.mainContentTitle = document.getElementById('mainContentTitle');
-                // Pasang event listener untuk toggle sidebar pada tombol di header mobile
-                document.getElementById('sidebarToggle').addEventListener('click', app.toggleSidebar);
-            }
+            // DOMElements.mainContent.style.paddingTop = '56px'; // Tidak lagi diperlukan karena tombol toggle di luar flow konten
+
+            // Pastikan tombol toggle terlihat di mobile
+            DOMElements.sidebarToggle.style.display = 'block';
         } else {
             // Desktop: Sidebar terlihat, konten utama menyesuaikan
             DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
             DOMElements.mainContent.classList.remove('main-mobile-full');
             DOMElements.overlay.classList.add('hidden'); // Overlay selalu tersembunyi di desktop
-            DOMElements.mainContent.style.paddingTop = '0'; // Hapus padding-top di desktop
+            // DOMElements.mainContent.style.paddingTop = '0'; // Tidak lagi diperlukan
 
-            // Hapus mainHeader dari DOM jika ada
-            if (DOMElements.mainHeader) {
-                DOMElements.mainHeader.remove();
-                DOMElements.mainHeader = null; // Reset referensi
-                DOMElements.mainContentTitle = null; // Reset referensi
-            }
+            // Sembunyikan tombol toggle di desktop
+            DOMElements.sidebarToggle.style.display = 'none';
             
             if (appState.isCollapsed) {
                 DOMElements.mainContent.classList.remove('ml-64');
@@ -500,9 +469,8 @@ const app = {
     },
 
     setupEventListeners() {
-        // Karena sidebarToggle akan dibuat dan dihapus, kita tidak bisa melampirkannya di sini.
-        // Listener akan dipasang di applyLayoutClasses saat header mobile dibuat.
-        // Gunakan event delegation jika ada kebutuhan umum untuk sidebarToggle di luar mobile header.
+        // Event listener untuk sidebarToggle sekarang dipasang di sini karena statis
+        DOMElements.sidebarToggle.addEventListener('click', app.toggleSidebar);
 
         DOMElements.overlay.addEventListener('click', function() {
             if (appState.isMobile) {
