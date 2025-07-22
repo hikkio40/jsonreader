@@ -19,15 +19,6 @@
     margin-left: 0 !important;
 }
 
-.sidebar-collapsed .sidebar-header-content {
-    justify-content: center;
-    gap: 0 !important;
-    padding: 0 !important;
-}
-.sidebar-collapsed .sidebar-toggle-button {
-    padding: 16px !important;
-}
-
 .sidebar-collapsed .sidebar-menu-item a {
     display: flex;
     justify-content: center;
@@ -40,7 +31,7 @@
     .sidebar-mobile-hidden {
         transform: translateX(-100%);
     }
-    .main-mobile-full {
+    .main-content-wrapper {
         margin-left: 0 !important;
     }
 }
@@ -70,4 +61,55 @@
     display: flex; /* Jadikan ul sebagai flex container */
     flex-direction: column; /* Atur arah flex ke kolom */
     height: 100%; /* Pastikan ul mengisi tinggi penuh nav */
+}
+
+/* New styles for the main header */
+#mainHeader {
+    position: fixed;
+    top: 0;
+    left: 0; /* Default for mobile */
+    right: 0;
+    height: 56px; /* Approx height of py-3 px-4 + border */
+    background-color: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 16px;
+    z-index: 30; /* Below sidebar (z-50) but above main content */
+    display: flex;
+    align-items: center;
+    transition: left 0.3s ease-in-out;
+}
+
+/* Adjust main content to start below the fixed header */
+.main-content-wrapper {
+    padding-top: 56px; /* Height of #mainHeader */
+}
+
+/* Desktop adjustments for mainHeader when sidebar is open */
+@media (min-width: 768px) {
+    #mainHeader {
+        left: 256px; /* 64px (sidebar width) * 4 for ml-64 and w-64 */
+    }
+    .main-content-wrapper {
+        margin-left: 256px; /* Ensure main content respects sidebar width */
+    }
+}
+
+/* Adjust mainHeader when sidebar is collapsed (desktop) */
+.sidebar-collapsed + .main-content-wrapper #mainHeader {
+    left: 64px; /* Corresponds to sidebar-collapsed width */
+}
+
+/* Adjust main content margin when sidebar is collapsed (desktop) */
+.sidebar-collapsed + .main-content-wrapper {
+    margin-left: 64px;
+}
+
+/* Hide toggle button on desktop, show on mobile */
+#mainHeader #sidebarToggle {
+    display: block; /* Default visible on mobile */
+}
+@media (min-width: 768px) {
+    #mainHeader #sidebarToggle {
+        display: none; /* Hide on desktop */
+    }
 }
