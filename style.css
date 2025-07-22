@@ -11,7 +11,7 @@
 /* Gaya untuk Header Utama Aplikasi */
 #mainAppHeader {
     height: 56px; /* Tinggi header */
-    transition: left 0.5s ease-in-out; /* Ubah dari 0.3s ke 0.5s */
+    /* Padding dan flex properties dipindahkan ke div di dalamnya */
 }
 #mainAppHeader > div { /* Inner div for max-width and content alignment */
     padding: 0 1rem; /* Tailwind px-4 becomes 1rem */
@@ -22,7 +22,6 @@
 .main-content-wrapper {
     padding-top: 56px; /* Tinggi #mainAppHeader */
     margin-left: 0; /* Default tanpa sidebar */
-    transition: margin-left 0.5s ease-in-out; /* Ubah dari 0.3s ke 0.5s */
 }
 
 /* Gaya untuk Sidebar TOC (dinamis) */
@@ -34,7 +33,7 @@
     width: 256px; /* Lebar sidebar TOC */
     background-color: white;
     border-right: 1px solid #e5e7eb;
-    transition: transform 0.5s ease-in-out; /* Ubah dari 0.3s ke 0.5s */
+    transition: transform 0.3s ease-in-out;
     z-index: 50; /* Lebih tinggi dari overlay */
     display: flex;
     flex-direction: column;
@@ -81,6 +80,7 @@
 /* Desktop Styles */
 @media (min-width: 768px) {
     #mainAppHeader {
+        /* Header utama di desktop akan bergeser sesuai dengan sidebar TOC */
         left: 0; /* Default: di kiri */
     }
     .main-content-wrapper {
@@ -96,12 +96,12 @@
         transform: translateX(-100%);
     }
 
-    /* Kelas baru untuk transisi desktop */
-    .main-content-wrapper.ml-desktop-toc-open {
-        margin-left: 256px; /* Konten utama bergeser saat TOC aktif */
-    }
-    #mainAppHeader.header-desktop-toc-open {
+    /* Penyesuaian saat sidebar TOC aktif di desktop */
+    body.toc-active #mainAppHeader {
         left: 256px; /* Header bergeser saat TOC aktif */
+    }
+    body.toc-active .main-content-wrapper {
+        margin-left: 256px; /* Konten utama bergeser saat TOC aktif */
     }
 }
 
