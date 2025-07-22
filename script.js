@@ -119,7 +119,7 @@ const uiService = {
                     <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengguna</span>
                 </a>
             </li>
-            <li class="sidebar-menu-item mt-auto"> <!-- Added mt-auto for pushing to bottom -->
+            <li class="sidebar-menu-item mt-auto">
                 <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
                     <span class="material-icons text-xl flex-shrink-0">settings</span>
                     <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengaturan</span>
