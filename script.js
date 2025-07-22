@@ -6,6 +6,8 @@ const DOMElements = {
     overlay: document.getElementById('overlay'),
     sidebarTitle: document.getElementById('sidebarTitle'),
     sidebarMenu: document.getElementById('sidebarMenu'),
+    mainHeader: document.getElementById('mainHeader'), // New
+    mainContentTitle: document.getElementById('mainContentTitle'), // New
 };
 
 const appState = {
@@ -86,9 +88,12 @@ const uiService = {
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
+    setMainContentTitle(title) {
+        DOMElements.mainContentTitle.textContent = title;
+    },
+
     renderMainMenuSidebar() {
         DOMElements.sidebarTitle.textContent = 'Website Saya';
-        // Memisahkan menu utama dan menu pengaturan ke dalam dua ul terpisah
         DOMElements.sidebarMenu.innerHTML = `
             <ul class="space-y-2">
                 <li class="sidebar-menu-item">
@@ -122,7 +127,7 @@ const uiService = {
                     </a>
                 </li>
             </ul>
-            <ul class="space-y-2 mt-auto"> <!-- ul terpisah untuk Pengaturan -->
+            <ul class="space-y-2 mt-auto">
                 <li class="sidebar-menu-item">
                     <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
                         <span class="material-icons text-xl flex-shrink-0">settings</span>
@@ -417,16 +422,18 @@ const navigationService = {
 const app = {
     checkMobile() {
         appState.isMobile = window.innerWidth < 768;
-        if (appState.isMobile && appState.currentView === 'home') {
+        if (appState.isMobile) {
             DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
             DOMElements.mainContent.classList.add('main-mobile-full');
             DOMElements.overlay.classList.add('hidden');
-        } else if (!appState.isMobile && appState.currentView === 'home') {
+            DOMElements.mainHeader.style.left = '0'; // Ensure header is full width on mobile
+        } else { // Desktop
             DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
             DOMElements.mainContent.classList.remove('main-mobile-full');
             if (!appState.isCollapsed) {
                 DOMElements.mainContent.classList.add('ml-64');
             }
+            DOMElements.mainHeader.style.left = appState.isCollapsed ? '64px' : '256px'; // Adjust header left for desktop
         }
     },
 
@@ -446,10 +453,12 @@ const app = {
                 DOMElements.sidebar.classList.add('sidebar-collapsed');
                 DOMElements.mainContent.classList.remove('ml-64');
                 DOMElements.mainContent.classList.add('ml-16');
+                DOMElements.mainHeader.style.left = '64px'; // Adjust mainHeader for collapsed sidebar
             } else {
                 DOMElements.sidebar.classList.remove('sidebar-collapsed');
                 DOMElements.mainContent.classList.remove('ml-16');
                 DOMElements.mainContent.classList.add('ml-64');
+                DOMElements.mainHeader.style.left = '256px'; // Adjust mainHeader for expanded sidebar
             }
         }
     },
