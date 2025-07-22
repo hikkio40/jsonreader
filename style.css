@@ -11,7 +11,12 @@
 /* Gaya untuk Header Utama Aplikasi */
 #mainAppHeader {
     height: 56px; /* Tinggi header */
+    /* Padding dan flex properties dipindahkan ke div di dalamnya */
 }
+#mainAppHeader > div { /* Inner div for max-width and content alignment */
+    padding: 0 1rem; /* Tailwind px-4 becomes 1rem */
+}
+
 
 /* Penyesuaian padding konten utama agar tidak tertutup header */
 .main-content-wrapper {
@@ -75,16 +80,28 @@
 /* Desktop Styles */
 @media (min-width: 768px) {
     #mainAppHeader {
-        left: 256px; /* Pindah ke kanan saat sidebar TOC terbuka */
+        /* Header utama di desktop akan bergeser sesuai dengan sidebar TOC */
+        left: 0; /* Default: di kiri */
     }
     .main-content-wrapper {
-        margin-left: 256px; /* Konten utama bergeser untuk sidebar TOC */
+        margin-left: 0; /* Default: tanpa sidebar */
     }
     #sidebarToggle {
         display: none; /* Sembunyikan toggle di desktop */
     }
-    #tocSidebar.toc-sidebar-hidden {
+    #tocSidebar {
         transform: translateX(0); /* Pastikan sidebar TOC terlihat di desktop */
+    }
+    #tocSidebar.toc-sidebar-hidden { /* Ini untuk kasus di mana sidebar TOC tidak ada di DOM */
+        transform: translateX(-100%);
+    }
+
+    /* Penyesuaian saat sidebar TOC aktif di desktop */
+    body.toc-active #mainAppHeader {
+        left: 256px; /* Header bergeser saat TOC aktif */
+    }
+    body.toc-active .main-content-wrapper {
+        margin-left: 256px; /* Konten utama bergeser saat TOC aktif */
     }
 }
 
@@ -94,7 +111,7 @@
         left: 0; /* Header selalu di kiri di mobile */
     }
     .main-content-wrapper {
-        margin-left: 0; /* Konten utama selalu penuh di mobile */
+        margin-left: 0 !important; /* Konten utama selalu penuh di mobile */
     }
     #sidebarToggle {
         display: block; /* Tampilkan toggle di mobile */
