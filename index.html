@@ -10,11 +10,21 @@
 </head>
 <body class="bg-white text-black font-sans app-container">
     <!-- Header Utama Aplikasi (selalu ada) -->
-    <header id="mainAppHeader" class="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 py-3 px-4 z-40 flex items-center transition-all duration-300 ease-in-out">
-        <button id="sidebarToggle" class="p-2 hover:bg-gray-100 rounded md:hidden">
-            <span class="material-icons text-xl">menu</span>
-        </button>
-        <h1 id="mainTitle" class="text-xl font-semibold ml-4 md:ml-0">Website Saya</h1>
+    <header id="mainAppHeader" class="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 py-3 px-4 z-40 transition-all duration-300 ease-in-out">
+        <div class="max-w-6xl mx-auto w-full flex items-center justify-between">
+            <div class="flex items-center">
+                <button id="sidebarToggle" class="p-2 hover:bg-gray-100 rounded md:hidden">
+                    <span class="material-icons text-xl">menu</span>
+                </button>
+                <h1 id="mainTitle" class="text-xl font-semibold ml-4 md:ml-0">Website Saya</h1>
+            </div>
+            <!-- Navigasi Dummy di Kanan -->
+            <nav class="hidden md:flex space-x-4">
+                <a href="#" class="text-gray-600 hover:text-black">Tentang</a>
+                <a href="#" class="text-gray-600 hover:text-black">Kontak</a>
+                <a href="#" class="text-gray-600 hover:text-black">Kebijakan Privasi</a>
+            </nav>
+        </div>
     </header>
 
     <!-- Overlay untuk mobile (untuk sidebar TOC) -->
