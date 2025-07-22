@@ -1,417 +1,528 @@
-// Variable untuk menyimpan data yang dimuat dari JSON eksternal
-let seriesIndexData = [];
-let currentSeriesInfo = null;
-let currentSeriesVolumes = [];
-let currentVolumeMetadata = null; // Mengganti currentVolumeContent untuk menyimpan metadata volume (daftar bab)
-let chapterContentCache = {}; // Cache untuk menyimpan konten bab yang sudah dimuat
+// Mendapatkan referensi elemen DOM
+const DOMElements = {
+    sidebarToggle: document.getElementById('sidebarToggle'),
+    sidebar: document.getElementById('sidebar'),
+    mainContent: document.getElementById('mainContent'),
+    dynamicContent: document.getElementById('dynamicContent'),
+    overlay: document.getElementById('overlay'),
+    sidebarTitle: document.getElementById('sidebarTitle'),
+    sidebarMenu: document.getElementById('sidebarMenu'),
+};
 
-// Fungsi utilitas untuk mengambil data JSON dari URL
-async function fetchData(url) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            // Jika respons bukan OK (misalnya 404 Not Found, 500 Internal Server Error)
-            throw new Error(`HTTP error! status: ${response.status} from ${url}`);
-        }
+// Objek state aplikasi terpusat
+const appState = {
+    isCollapsed: false,
+    isMobile: false,
+    currentView: 'home', // 'home', 'series-detail', 'volume-read'
+    currentSeriesId: null,
+    currentVolumeId: null,
+    currentChapterIndex: 0,
+    currentVolumeChapters: [], // Menyimpan daftar bab untuk navigasi
+    currentVolumeData: null,   // Menyimpan data volume saat ini
+};
 
-        // Cek Content-Type untuk memastikan ini adalah JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const textResponse = await response.text();
-            console.error(`Expected JSON, but received Content-Type: ${contentType}. Response text (first 500 chars):`, textResponse.substring(0, 500) + '...');
-            throw new Error(`Invalid content type. Expected JSON for ${url}.`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error("Gagal mengambil data:", error);
-        const mainContent = document.getElementById('main-content');
-        mainContent.innerHTML = `
-            <div class="container mx-auto px-4 py-8 text-center text-red-600">
-                <p>Maaf, terjadi kesalahan saat memuat data dari <strong>${url}</strong>.</p>
-                <p>Pesan Error: ${error.message}</p>
-                <p>Pastikan file JSON ada di lokasi yang benar dan server web Anda berjalan dengan baik.</p>
-                <p>Jika Anda menjalankan ini secara lokal (misalnya, membuka file index.html langsung di browser), fungsi 'fetch' mungkin tidak dapat mengakses file lokal. Coba gunakan server web sederhana (misalnya, Python's 'http.server' atau 'serve' dari Node.js).</p>
-            </div>
-        `;
-        return null; // Mengembalikan null agar fungsi pemanggil bisa menanganinya
-    }
-}
-
-// Fungsi untuk merender tampilan daftar seri (homepage)
-async function renderHomePage() {
-    const mainContent = document.getElementById('main-content');
-    mainContent.innerHTML = `
-        <div class="container mx-auto px-4 py-8">
-            <h2 class="text-xl font-semibold mb-6 text-center">Daftar Seri</h2>
-            <div id="series-grid" class="grid-container">
-                <!-- Loading indicator -->
-                <div class="col-span-full text-center py-8">Memuat daftar seri...</div>
-            </div>
-        </div>
-    `;
-
-    seriesIndexData = await fetchData('/series/series-index.json');
-    if (seriesIndexData) {
-        renderSeries(seriesIndexData);
-    }
-}
-
-// Fungsi untuk merender daftar seri ke dalam DOM
-function renderSeries(seriesData) {
-    const seriesGrid = document.getElementById('series-grid');
-    seriesGrid.innerHTML = ''; // Bersihkan konten sebelumnya
-
-    if (!seriesData || seriesData.length === 0) {
-        seriesGrid.innerHTML = `<div class="col-span-full text-center py-8">Tidak ada seri yang ditemukan.</div>`;
-        return;
-    }
-
-    seriesData.forEach(series => {
-        const seriesCard = document.createElement('div');
-        seriesCard.className = 'post-card no-shadow cursor-pointer';
-        seriesCard.setAttribute('data-id', series.id);
-
-        // Path cover: disesuaikan dengan struktur folder /covers/ di root
-        seriesCard.innerHTML = `
-            <img src="covers/${series.cover.split('/').pop()}" alt="Cover ${series.judul}" class="w-full h-full object-cover no-shadow" onerror="this.onerror=null;this.src='https://placehold.co/400x600/CCCCCC/000000?text=No+Cover';">
-            <div class="post-content">
-                <h3 class="post-title">${series.judul}</h3>
-            </div>
-        `;
-        seriesGrid.appendChild(seriesCard);
-
-        seriesCard.addEventListener('click', () => {
-            renderDetailPage(series.id);
-        });
-    });
-}
-
-// Fungsi untuk merender tampilan detail seri
-async function renderDetailPage(seriesId) {
-    const mainContent = document.getElementById('main-content');
-    mainContent.innerHTML = `
-        <div class="container mx-auto px-4 py-8 text-center">Memuat detail seri...</div>
-    `;
-
-    // Ambil info.json dan volumes.json secara paralel
-    const [infoData, volumesData] = await Promise.all([
-        fetchData(`/series/${seriesId}/info.json`),
-        fetchData(`/series/${seriesId}/volumes.json`)
-    ]);
-
-    if (!infoData || !volumesData) {
-        // Error sudah ditangani di fetchData, cukup return
-        return;
-    }
-
-    currentSeriesInfo = infoData;
-    currentSeriesVolumes = volumesData;
-
-    mainContent.innerHTML = ''; // Bersihkan loading indicator
-
-    // --- Bagian Tombol Kembali ---
-    const backButtonContainer = document.createElement('div');
-    backButtonContainer.className = 'container mx-auto px-4 py-4';
-    const backButton = document.createElement('button');
-    backButton.className = 'bg-gray-200 text-gray-800 px-4 py-2 rounded-none hover:bg-gray-300 no-shadow';
-    backButton.textContent = '← Kembali ke Beranda';
-    backButton.onclick = renderHomePage;
-    backButtonContainer.appendChild(backButton);
-    mainContent.appendChild(backButtonContainer);
-
-    // --- Bagian Info Seri ---
-    const infoSectionContainer = document.createElement('div');
-    infoSectionContainer.className = 'container mx-auto px-4 py-4';
-    const infoSection = document.createElement('div');
-    infoSection.className = 'bg-white p-6 border border-gray-200 no-shadow';
-    infoSection.innerHTML = `
-        <h2 class="text-3xl font-bold mb-4 text-center">${currentSeriesInfo.judul}</h2>
-        <p class="text-gray-700 mb-4 text-justify">${currentSeriesInfo.deskripsi}</p>
-        <div class="text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-2">
-            <p><strong>Penulis:</strong> ${currentSeriesInfo.penulis}</p>
-            <p><strong>Genre:</strong> ${currentSeriesInfo.genre}</p>
-            <p><strong>Status:</strong> ${currentSeriesInfo.status}</p>
-            <p><strong>Rilis:</strong> ${currentSeriesInfo.rilis}</p>
-        </div>
-    `;
-    infoSectionContainer.appendChild(infoSection);
-    mainContent.appendChild(infoSectionContainer);
-
-    // --- Bagian Daftar Volume ---
-    const volumesSectionContainer = document.createElement('div');
-    volumesSectionContainer.className = 'container mx-auto px-4 py-8';
-    const volumesSection = document.createElement('div');
-    volumesSection.className = 'bg-white p-6 border border-gray-200 no-shadow';
-    volumesSection.innerHTML = `
-        <h3 class="text-2xl font-semibold mb-6 text-center">Daftar Volume</h3>
-        <div id="detail-volumes-grid" class="grid-container">
-            <!-- Volume akan dirender di sini -->
-        </div>
-    `;
-    volumesSectionContainer.appendChild(volumesSection);
-    mainContent.appendChild(volumesSectionContainer);
-
-    const detailVolumesGrid = volumesSection.querySelector('#detail-volumes-grid');
-    if (!currentSeriesVolumes || currentSeriesVolumes.length === 0) {
-        detailVolumesGrid.innerHTML = `<div class="col-span-full text-center py-4">Tidak ada volume yang ditemukan untuk seri ini.</div>`;
-        return;
-    }
-
-    currentSeriesVolumes.forEach(volume => {
-        const volumeCard = document.createElement('div');
-        volumeCard.className = 'post-card no-shadow cursor-pointer';
-        volumeCard.setAttribute('data-id', volume.id);
-
-        // Path cover: disesuaikan dengan struktur folder /covers/ di root
-        volumeCard.innerHTML = `
-            <img src="covers/${volume.cover.split('/').pop()}" alt="Cover ${volume.judul}" class="w-full h-full object-cover no-shadow" onerror="this.onerror=null;this.src='https://placehold.co/400x600/CCCCCC/000000?text=No+Cover';">
-            <div class="post-content">
-                <h4 class="post-title">${volume.judul}</h4>
-            </div>
-        `;
-        detailVolumesGrid.appendChild(volumeCard);
-
-        volumeCard.addEventListener('click', () => {
-            renderVolumePage(volume.id, seriesId);
-        });
-    });
-}
-
-// Fungsi untuk menampilkan bab yang dipilih dan memuat kontennya
-async function showChapter(chapterId, seriesId) {
-    // Sembunyikan semua bab
-    document.querySelectorAll('.chapter-content-section').forEach(section => {
-        section.classList.remove('active');
-    });
-    // Hapus kelas aktif dari semua link daftar isi
-    document.querySelectorAll('.toc-panel a').forEach(link => {
-        link.classList.remove('active-tab');
-    });
-
-    // Tampilkan bab yang dipilih
-    const activeChapterSection = document.getElementById(`chapter-content-${chapterId}`);
-    if (activeChapterSection) {
-        activeChapterSection.classList.add('active');
-    }
-    // Tambahkan kelas aktif ke link daftar isi yang sesuai
-    const activeLink = document.querySelector(`.toc-panel a[data-chapter-id="${chapterId}"]`);
-    if (activeLink) {
-        activeLink.classList.add('active-tab');
-    }
-
-    // Dapatkan metadata bab dari currentVolumeMetadata
-    const chapterMetadata = currentVolumeMetadata.bab.find(b => b.id === chapterId);
-    if (!chapterMetadata) {
-        console.error(`Metadata bab dengan ID ${chapterId} tidak ditemukan.`);
-        activeChapterSection.innerHTML = `<p class="text-center text-red-600">Konten bab tidak ditemukan.</p>`;
-        return;
-    }
-
-    // Periksa cache terlebih dahulu
-    if (chapterContentCache[chapterId]) {
-        renderChapterContent(activeChapterSection, chapterContentCache[chapterId], seriesId);
-        return;
-    }
-
-    // Tampilkan loading indicator di dalam section bab
-    activeChapterSection.innerHTML = `<h3>${chapterMetadata.judul}</h3><p class="text-center py-4">Memuat konten bab...</p>`;
-
-    // Ambil konten bab dari file JSON terpisah
-    const chapterFilePath = `/series/${seriesId}/chapters/${chapterMetadata.file}`;
-    const chapterContent = await fetchData(chapterFilePath);
-
-    if (chapterContent) {
-        chapterContentCache[chapterId] = chapterContent; // Simpan ke cache
-        renderChapterContent(activeChapterSection, chapterContent, seriesId);
-    } else {
-        activeChapterSection.innerHTML = `<h3>${chapterMetadata.judul}</h3><p class="text-center text-red-600">Gagal memuat konten bab.</p>`;
-    }
-}
-
-// Fungsi untuk merender konten bab ke dalam section yang diberikan
-function renderChapterContent(chapterSectionElement, chapterContentData, seriesId) {
-    chapterSectionElement.innerHTML = `<h3>${chapterContentData.judul}</h3>`; // Pastikan judul bab diatur
-
-    chapterContentData.konten.forEach(item => {
-        if (item.paragraf) {
-            const p = document.createElement('p');
-            p.textContent = item.paragraf;
-            chapterSectionElement.appendChild(p);
-        } else if (item.gambar) {
-            const img = document.createElement('img');
-            const fullImagePathInJson = item.gambar;
-            img.src = `images/${fullImagePathInJson}`; // Path yang benar
-            img.alt = item.caption || 'Gambar ilustrasi';
-            
-            img.onerror = function() {
-                const failedSrc = this.src;
-                this.onerror = null;
-                this.src = 'https://placehold.co/800x450/CCCCCC/000000?text=Gambar+Tidak+Ditemukan';
-                console.error(`Gagal memuat gambar: ${failedSrc}. Menggunakan placeholder.`);
-            };
-
-            chapterSectionElement.appendChild(img);
-            if (item.caption) {
-                const caption = document.createElement('p');
-                caption.className = 'text-center text-sm text-gray-500 mt-2 mb-4';
-                caption.textContent = item.caption;
-                chapterSectionElement.appendChild(caption);
+// --- Data Service: Mengelola pengambilan data JSON ---
+const dataService = {
+    /**
+     * Mengambil data JSON dari path yang diberikan.
+     * Menangani penundaan jaringan dan penanganan error.
+     * @param {string} path - Path relatif ke file JSON (misal: 'series/series-index.json').
+     * @returns {Promise<Object|null>} Data JSON atau null jika gagal.
+     */
+    async fetchJson(path) {
+        try {
+            // Menggunakan jalur relatif karena file akan di-host bersama
+            const response = await fetch(path);
+            if (!response.ok) {
+                throw new Error(`Gagal memuat ${path}: ${response.statusText}`);
             }
-        } else if (item.kutipan) {
-            const blockquote = document.createElement('blockquote');
-            blockquote.className = 'quote';
-            blockquote.textContent = item.kutipan;
-            chapterSectionElement.appendChild(blockquote);
-        } else if (item.dialog) {
-            const dialogBox = document.createElement('div');
-            dialogBox.className = 'dialog-box';
-            item.dialog.forEach(line => {
-                const p = document.createElement('p');
-                p.innerHTML = `<strong>${line.karakter}:</strong> ${line.ucapan}`;
-                dialogBox.appendChild(p);
-            });
-            chapterSectionElement.appendChild(dialogBox);
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching JSON:', error);
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat konten. ${error.message}</div>`;
+            return null;
         }
-    });
-}
+    },
 
-
-// Fungsi untuk merender tampilan baca volume
-async function renderVolumePage(volumeId, seriesId) {
-    const mainContent = document.getElementById('main-content');
-    mainContent.innerHTML = `
-        <div class="container mx-auto px-4 py-8 text-center">Memuat metadata volume...</div>
-    `;
-
-    // Path ke file JSON metadata volume (misal: volume1.json)
-    const volumeMetadataPath = `/series/${seriesId}/${volumeId}.json`;
-    currentVolumeMetadata = await fetchData(volumeMetadataPath); // Sekarang ini hanya metadata bab
-
-    if (!currentVolumeMetadata) {
-        // Error sudah ditangani di fetchData, cukup return
-        return;
+    /**
+     * Mendapatkan path lengkap untuk gambar bab.
+     * @param {string} seriesId - ID seri.
+     * @param {string} volumeId - ID volume.
+     * @param {string} imageName - Nama file gambar.
+     * @returns {string} Path lengkap ke gambar.
+     */
+    getChapterImagePath(seriesId, volumeId, imageName) {
+        // Menggunakan jalur relatif untuk gambar
+        return `images/${seriesId}/${volumeId}/${imageName}`;
     }
+};
 
-    // Reset cache bab untuk volume baru
-    chapterContentCache = {};
+// --- UI Service: Mengelola rendering UI dan manipulasi DOM ---
+const uiService = {
+    /**
+     * Menampilkan indikator loading di area konten dinamis.
+     */
+    showLoading() {
+        DOMElements.dynamicContent.innerHTML = `
+            <div class="flex justify-center items-center h-64">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+                <p class="ml-4 text-gray-600">Memuat...</p>
+            </div>
+        `;
+    },
 
-    mainContent.innerHTML = ''; // Bersihkan loading indicator
+    /**
+     * Merender menu utama di sidebar.
+     */
+    renderMainMenuSidebar() {
+        DOMElements.sidebarTitle.textContent = 'Website Saya';
+        DOMElements.sidebarMenu.innerHTML = `
+            <li class="sidebar-menu-item">
+                <a href="#" onclick="navigationService.renderHomepage()" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                    <span class="material-icons text-xl flex-shrink-0">home</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Beranda</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                    <span class="material-icons text-xl flex-shrink-0">article</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Artikel</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                    <span class="material-icons text-xl flex-shrink-0">category</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Kategori</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                    <span class="material-icons text-xl flex-shrink-0">perm_media</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Media</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                    <span class="material-icons text-xl flex-shrink-0">people</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengguna</span>
+                </a>
+            </li>
+            <li class="sidebar-menu-item">
+                <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                    <span class="material-icons text-xl flex-shrink-0">settings</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengaturan</span>
+                </a>
+            </li>
+        `;
+    },
 
-    // --- Bagian Tombol Kembali ke Detail Seri ---
-    const backButtonContainer = document.createElement('div');
-    backButtonContainer.className = 'container mx-auto px-4 py-4';
-    const backButton = document.createElement('button');
-    backButton.className = 'bg-gray-200 text-gray-800 px-4 py-2 rounded-none hover:bg-gray-300 no-shadow';
-    backButton.textContent = '← Kembali ke Detail Seri';
-    backButton.onclick = () => renderDetailPage(seriesId);
-    backButtonContainer.appendChild(backButton);
-    mainContent.appendChild(backButtonContainer);
-
-    // --- Bagian Layout Pembaca Volume (Panel Kiri dan Kanan) ---
-    const volumeReaderLayout = document.createElement('div');
-    volumeReaderLayout.className = 'volume-reader-layout';
-
-    // Tambahkan overlay untuk mobile
-    const tocPanelOverlay = document.createElement('div');
-    tocPanelOverlay.id = 'toc-panel-overlay';
-    tocPanelOverlay.className = 'toc-panel-overlay';
-    volumeReaderLayout.appendChild(tocPanelOverlay);
-
-
-    // --- Panel Kiri: Daftar Isi (Table of Contents) ---
-    const tocPanel = document.createElement('div');
-    tocPanel.id = 'toc-panel'; // Tambahkan ID
-    tocPanel.className = 'toc-panel no-shadow';
-    tocPanel.innerHTML = `
-        <h3>Daftar Isi</h3>
-        <ul id="toc-list"></ul>
-    `;
-    const tocList = tocPanel.querySelector('#toc-list');
-
-    if (!currentVolumeMetadata.bab || currentVolumeMetadata.bab.length === 0) {
-        tocList.innerHTML = `<li><p class="text-gray-500">Tidak ada bab.</p></li>`;
-    } else {
-        currentVolumeMetadata.bab.forEach(bab => {
-            const listItem = document.createElement('li');
-            const link = document.createElement('a');
-            link.href = '#';
-            link.textContent = bab.judul;
-            link.setAttribute('data-chapter-id', bab.id);
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                showChapter(bab.id, seriesId); // Meneruskan seriesId
-                // Tutup menu hamburger setelah memilih bab di mobile
-                if (window.innerWidth <= 1023) { // Sesuaikan dengan breakpoint lg:hidden
-                    toggleTocPanel(false);
-                }
-            });
-            listItem.appendChild(link);
-            tocList.appendChild(listItem);
+    /**
+     * Merender daftar bab di sidebar untuk tampilan volume.
+     * @param {Array<Object>} chapters - Daftar objek bab.
+     */
+    setupVolumeSidebar(chapters) {
+        DOMElements.sidebarTitle.textContent = 'Daftar Isi Volume';
+        let chaptersHtml = `
+            <li class="sidebar-menu-item">
+                <a href="#" onclick="navigationService.showSeriesDetail('${appState.currentSeriesId}')" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
+                    <span class="material-icons mr-2">arrow_back</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Kembali ke Seri</span>
+                </a>
+            </li>
+            <li class="border-t border-gray-200 my-2 sidebar-divider"></li>
+        `;
+        
+        chapters.forEach((chapter, index) => {
+            const isActive = index === appState.currentChapterIndex ? 'bg-blue-100 text-blue-600' : '';
+            chaptersHtml += `
+                <li class="sidebar-menu-item">
+                    <a href="#" onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index})" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded ${isActive}">
+                        <span class="material-icons text-xl flex-shrink-0">menu_book</span>
+                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden text-sm">${chapter.judul}</span>
+                    </a>
+                </li>
+            `;
         });
-    }
-    volumeReaderLayout.appendChild(tocPanel);
+        
+        DOMElements.sidebarMenu.innerHTML = chaptersHtml;
+    },
 
-    // --- Panel Kanan: Konten Volume ---
-    const contentPanel = document.createElement('div');
-    contentPanel.className = 'content-panel no-shadow';
-    
-    // Menghapus teks placeholder "Pilih bab dari daftar isi."
-    contentPanel.innerHTML = `
-        <div id="chapter-content-container">
-            <!-- Konten bab individual akan dirender di sini -->
-        </div>
-    `;
-
-    const chapterContentContainer = contentPanel.querySelector('#chapter-content-container');
-    
-    // Siapkan section untuk setiap bab, tetapi biarkan kosong sampai dimuat
-    if (currentVolumeMetadata.bab && currentVolumeMetadata.bab.length > 0) {
-        currentVolumeMetadata.bab.forEach(bab => {
-            const chapterSection = document.createElement('section');
-            chapterSection.id = `chapter-content-${bab.id}`;
-            chapterSection.className = 'chapter-content-section';
-            // Konten akan dimuat nanti oleh showChapter
-            chapterContentContainer.appendChild(chapterSection);
+    /**
+     * Merender konten halaman beranda (daftar seri).
+     * @param {Array<Object>} seriesIndex - Daftar objek seri.
+     */
+    renderHomepageContent(seriesIndex) {
+        let seriesHtml = ``;
+        seriesIndex.forEach(series => {
+            seriesHtml += `
+                <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.showSeriesDetail('${series.id}')">
+                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden series-cover-placeholder">
+                        ${series.cover ? `<img src="${series.cover}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>`}
+                    </div>
+                    <h3 class="text-sm font-medium line-clamp-2 series-title">${series.judul}</h3>
+                </article>
+            `;
         });
+
+        DOMElements.dynamicContent.innerHTML = `
+            <h2 class="text-2xl font-semibold mb-8 page-title">Light Novel Terbaru</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 series-grid">
+                ${seriesHtml}
+            </div>
+        `;
+    },
+
+    /**
+     * Merender konten halaman detail seri.
+     * @param {Object} info - Data info seri.
+     * @param {Array<Object>} volumes - Daftar objek volume.
+     */
+    renderSeriesDetailContent(info, volumes) {
+        let volumesHtml = '';
+        volumes.forEach(volume => {
+            volumesHtml += `
+                <div class="cursor-pointer hover:opacity-80 transition-opacity volume-card" onclick="navigationService.showVolume('${appState.currentSeriesId}', '${volume.id}')">
+                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 flex items-center justify-center overflow-hidden volume-cover-placeholder">
+                        ${volume.cover ? `<img src="${volume.cover}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>`}
+                    </div>
+                    <h4 class="text-xs font-medium text-center volume-title">${volume.judul}</h4>
+                </div>
+            `;
+        });
+
+        DOMElements.dynamicContent.innerHTML = `
+            <div class="mb-6">
+                <button onclick="navigationService.renderHomepage()" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-homepage-button">
+                    <span class="material-icons mr-2">arrow_back</span>
+                    Kembali ke Beranda
+                </button>
+            </div>
+            <div class="series-detail-container">
+                <!-- Bagian Header dengan Poster dan Info -->
+                <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
+                    <!-- Poster -->
+                    <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
+                        <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
+                            ${info.cover ? `<img src="${info.cover}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>`}
+                        </div>
+                    </div>
+                    
+                    <!-- Bagian Info -->
+                    <div class="flex-1 series-info-section">
+                        <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
+                        <div class="flex items-center gap-6 text-gray-600 mb-4 series-metadata">
+                            <div class="flex items-center series-author">
+                                <span class="material-icons text-sm mr-1 align-middle">person</span>
+                                ${info.penulis}
+                            </div>
+                            <div class="flex items-center series-release-date">
+                                <span class="material-icons text-sm mr-1 align-middle">calendar_today</span>
+                                ${info.rilis}
+                            </div>
+                            <div class="flex items-center series-genre">
+                                <span class="material-icons text-sm mr-1">label</span>
+                                ${info.genre}
+                            </div>
+                            <div class="flex items-center series-status">
+                                <span class="material-icons text-sm mr-1">info</span>
+                                ${info.status}
+                            </div>
+                        </div>
+                        
+                        <!-- Sinopsis -->
+                        <div class="series-synopsis">
+                            <h3 class="text-xl font-semibold mb-3">Sinopsis</h3>
+                            <p class="mb-4">${info.deskripsi}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="prose max-w-none series-volumes-section">
+                    <h3 class="text-xl font-semibold mb-3">Volume Terkait</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 volumes-grid">
+                        ${volumesHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Merender konten bab.
+     * @param {Object} chapterData - Data bab yang akan dirender.
+     * @param {Object} volumeData - Data volume saat ini.
+     * @param {number} chapterIndex - Indeks bab saat ini.
+     * @param {number} totalChapters - Total bab dalam volume.
+     */
+    renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
+        let chapterContentHtml = '';
+        chapterData.konten.forEach(item => {
+            if (item.paragraf) {
+                chapterContentHtml += `<p class="mb-4 chapter-paragraph">${item.paragraf}</p>`;
+            } else if (item.gambar) {
+                chapterContentHtml += `
+                    <div class="my-6 text-center chapter-image-wrapper">
+                        <img src="${dataService.getChapterImagePath(appState.currentSeriesId, appState.currentVolumeId, item.gambar)}" alt="Gambar ilustrasi" class="max-w-full h-auto mx-auto rounded-lg shadow-md chapter-image">
+                    </div>
+                `;
+            } else if (item.kutipan) {
+                chapterContentHtml += `
+                    <blockquote class="border-l-4 border-gray-300 pl-4 py-2 my-4 italic text-gray-700 chapter-quote">
+                        "${item.kutipan}"
+                    </blockquote>
+                `;
+            } else if (item.dialog) {
+                let dialogHtml = '';
+                item.dialog.forEach(d => {
+                    dialogHtml += `<p class="mb-2 chapter-dialog-line"><strong class="text-blue-700 chapter-dialog-character">${d.karakter}:</strong> <span class="chapter-dialog-speech">${d.ucapan}</span></p>`;
+                });
+                chapterContentHtml += `<div class="bg-gray-50 p-4 rounded-lg my-4 chapter-dialog-block">${dialogHtml}</div>`;
+            }
+        });
+        
+        // Tombol navigasi
+        const prevButton = chapterIndex > 0 ? 
+            `<button onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex - 1})" class="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded chapter-nav-button chapter-nav-prev">
+                <span class="material-icons mr-2">arrow_back</span>
+                Bab Sebelumnya
+            </button>` : '';
+        
+        const nextButton = chapterIndex < totalChapters - 1 ? 
+            `<button onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex + 1})" class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded chapter-nav-button chapter-nav-next">
+                Bab Selanjutnya
+                <span class="material-icons ml-2">arrow_forward</span>
+            </button>` : '';
+        
+        DOMElements.dynamicContent.innerHTML = `
+            <div class="chapter-navigation-top">
+                <button onclick="navigationService.showVolume('${appState.currentSeriesId}', '${appState.currentVolumeId}')" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-volume-button">
+                    <span class="material-icons mr-2">arrow_back</span>
+                    Kembali ke Volume
+                </button>
+            </div>
+            
+            <div class="chapter-content-wrapper">
+                <h1 class="text-3xl font-bold mb-6 volume-title">${volumeData.judul_volume || 'Judul Volume'}</h1>
+                
+                <div class="prose max-w-none text-justify leading-relaxed chapter-main-text">
+                    <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
+                    ${chapterContentHtml}
+                </div>
+                
+                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
+                    <div>${prevButton}</div>
+                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
+                    <div>${nextButton}</div>
+                </div>
+            </div>
+        `;
     }
+};
 
-    volumeReaderLayout.appendChild(contentPanel);
-    mainContent.appendChild(volumeReaderLayout);
+// --- Navigation Service: Mengelola transisi antar tampilan ---
+const navigationService = {
+    /**
+     * Merender halaman beranda.
+     */
+    async renderHomepage() {
+        appState.currentView = 'home';
+        appState.currentSeriesId = null;
+        appState.currentVolumeId = null;
+        appState.currentChapterIndex = 0;
 
-    // Tambahkan event listener untuk tombol hamburger setelah elemen ada di DOM
-    const hamburgerButton = document.getElementById('hamburger-menu-button');
-    if (hamburgerButton) {
-        hamburgerButton.onclick = () => toggleTocPanel(true);
+        uiService.renderMainMenuSidebar(); // Pastikan sidebar menampilkan menu utama
+        
+        app.checkMobile();
+        uiService.showLoading();
+
+        const seriesIndex = await dataService.fetchJson('series/series-index.json');
+        if (!seriesIndex) return;
+
+        uiService.renderHomepageContent(seriesIndex);
+    },
+
+    /**
+     * Menampilkan detail seri berdasarkan ID seri.
+     * @param {string} seriesId - ID seri yang akan ditampilkan.
+     */
+    async showSeriesDetail(seriesId) {
+        appState.currentView = 'series-detail';
+        appState.currentSeriesId = seriesId;
+        appState.currentVolumeId = null;
+        appState.currentChapterIndex = 0;
+
+        // Memastikan sidebar terlihat untuk tampilan detail seri
+        DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
+        DOMElements.mainContent.classList.remove('main-mobile-full');
+        if (!appState.isCollapsed) {
+            DOMElements.mainContent.classList.add('ml-64');
+        }
+        DOMElements.overlay.classList.add('hidden');
+
+        uiService.showLoading();
+
+        const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
+        const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
+
+        if (!info || !volumes) return;
+
+        // Reset sidebar ke menu utama, lalu perbarui judul
+        uiService.renderMainMenuSidebar(); 
+        DOMElements.sidebarTitle.textContent = 'Detail Seri'; 
+
+        uiService.renderSeriesDetailContent(info, volumes);
+    },
+
+    /**
+     * Menampilkan detail volume dan daftar babnya.
+     * @param {string} seriesId - ID seri.
+     * @param {string} volumeId - ID volume.
+     */
+    async showVolume(seriesId, volumeId) {
+        appState.currentView = 'volume-read';
+        appState.currentSeriesId = seriesId;
+        appState.currentVolumeId = volumeId;
+        appState.currentChapterIndex = 0; // Reset indeks bab saat masuk volume baru
+
+        // Memastikan sidebar terlihat untuk tampilan membaca
+        DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
+        DOMElements.mainContent.classList.remove('main-mobile-full');
+        if (!appState.isCollapsed) {
+            DOMElements.mainContent.classList.add('ml-64');
+        }
+        DOMElements.overlay.classList.add('hidden');
+
+        uiService.showLoading();
+
+        const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
+        if (!volumeData) return;
+
+        // Simpan data bab dan volume secara global di state aplikasi
+        appState.currentVolumeChapters = volumeData.bab;
+        appState.currentVolumeData = volumeData;
+
+        uiService.setupVolumeSidebar(volumeData.bab);
+        navigationService.showChapter(seriesId, volumeId, 0); // Muat bab pertama secara default
+    },
+
+    /**
+     * Menampilkan konten bab tertentu.
+     * @param {string} seriesId - ID seri.
+     * @param {string} volumeId - ID volume.
+     * @param {number} chapterIndex - Indeks bab yang akan ditampilkan.
+     */
+    async showChapter(seriesId, volumeId, chapterIndex) {
+        appState.currentChapterIndex = chapterIndex;
+        const chapterInfo = appState.currentVolumeChapters[chapterIndex];
+        const volumeData = appState.currentVolumeData; // Ambil data volume dari state aplikasi
+
+        if (!chapterInfo || !volumeData) {
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab atau data volume tidak ditemukan.</div>`;
+            return;
+        }
+
+        uiService.setupVolumeSidebar(appState.currentVolumeChapters); // Perbarui sidebar untuk menyorot bab saat ini
+        uiService.showLoading();
+
+        const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
+        if (!chapterData) return;
+
+        uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
     }
-    // Tambahkan event listener untuk overlay
-    tocPanelOverlay.onclick = () => toggleTocPanel(false);
+};
 
+// --- App Core: Mengelola logika aplikasi umum dan event listener ---
+const app = {
+    /**
+     * Memeriksa apakah tampilan saat ini adalah mobile atau desktop.
+     * Menyesuaikan kelas CSS sidebar dan main content.
+     */
+    checkMobile() {
+        appState.isMobile = window.innerWidth < 768;
+        if (appState.isMobile && appState.currentView === 'home') {
+            DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
+            DOMElements.mainContent.classList.add('main-mobile-full');
+            DOMElements.overlay.classList.add('hidden');
+        } else if (!appState.isMobile && appState.currentView === 'home') {
+            DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
+            DOMElements.mainContent.classList.remove('main-mobile-full');
+            if (!appState.isCollapsed) {
+                DOMElements.mainContent.classList.add('ml-64');
+            }
+        }
+    },
 
-    // Tampilkan bab pertama secara default setelah layout dimuat
-    if (currentVolumeMetadata.bab && currentVolumeMetadata.bab.length > 0) {
-        showChapter(currentVolumeMetadata.bab[0].id, seriesId);
-    }
-}
-
-// Fungsi untuk mengaktifkan/menonaktifkan panel daftar isi (untuk mobile)
-function toggleTocPanel(show) {
-    const tocPanel = document.getElementById('toc-panel');
-    const tocPanelOverlay = document.getElementById('toc-panel-overlay');
-
-    if (tocPanel && tocPanelOverlay) {
-        if (show) {
-            tocPanel.classList.add('active');
-            tocPanelOverlay.classList.add('active');
-            document.body.style.overflow = 'hidden'; // Mencegah scroll body saat menu terbuka
+    /**
+     * Mengubah status sidebar (ciut/perluas).
+     */
+    toggleSidebar() {
+        if (appState.isMobile) {
+            // Perilaku mobile
+            if (DOMElements.sidebar.classList.contains('sidebar-mobile-hidden')) {
+                DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
+                DOMElements.overlay.classList.add('hidden');
+            } else {
+                DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
+                DOMElements.overlay.classList.add('hidden');
+            }
         } else {
-            tocPanel.classList.remove('active');
-            tocPanelOverlay.classList.remove('active');
-            document.body.style.overflow = ''; // Mengembalikan scroll body
+            // Perilaku desktop
+            appState.isCollapsed = !appState.isCollapsed;
+            
+            if (appState.isCollapsed) {
+                DOMElements.sidebar.classList.add('sidebar-collapsed');
+                DOMElements.mainContent.classList.remove('ml-64');
+                DOMElements.mainContent.classList.add('ml-16');
+            } else {
+                DOMElements.sidebar.classList.remove('sidebar-collapsed');
+                DOMElements.mainContent.classList.remove('ml-16');
+                DOMElements.mainContent.classList.add('ml-64');
+            }
         }
+    },
+
+    /**
+     * Mengatur semua event listener aplikasi.
+     */
+    setupEventListeners() {
+        DOMElements.sidebarToggle.addEventListener('click', app.toggleSidebar);
+
+        // Tutup sidebar saat mengklik overlay (mobile)
+        DOMElements.overlay.addEventListener('click', function() {
+            if (appState.isMobile) {
+                DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
+                DOMElements.overlay.classList.add('hidden');
+            }
+        });
+
+        // Tangani perubahan ukuran jendela
+        window.addEventListener('resize', app.checkMobile);
+
+        // Tutup sidebar pada tombol escape (perluas jika diciutkan)
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (appState.isMobile && !DOMElements.sidebar.classList.contains('sidebar-mobile-hidden')) {
+                    DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
+                    DOMElements.overlay.classList.add('hidden');
+                } else if (!appState.isMobile && appState.isCollapsed) {
+                    app.toggleSidebar();
+                }
+            }
+        });
+
+        // Inisialisasi halaman beranda saat dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            app.checkMobile();
+            navigationService.renderHomepage();
+        });
     }
-}
+};
 
-
-// Panggil fungsi renderHomePage saat DOM selesai dimuat untuk menampilkan homepage pertama kali
-document.addEventListener('DOMContentLoaded', renderHomePage);
+// Memulai aplikasi
+app.setupEventListeners();
