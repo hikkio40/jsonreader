@@ -13,12 +13,8 @@
     <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out z-50 app-sidebar">
         <!-- Header di dalam sidebar -->
         <header class="bg-white border-b border-gray-200 px-4 py-4 sidebar-header">
-            <div id="sidebarHeaderContent" class="flex items-center space-x-3 sidebar-header-content">
-                <button id="sidebarToggle" class="p-2 hover:bg-gray-100 rounded flex-shrink-0 sidebar-toggle-button">
-                    <span class="material-icons text-xl">menu</span>
-                </button>
-                <h1 id="sidebarTitle" class="text-xl font-semibold sidebar-text whitespace-nowrap overflow-hidden sidebar-title">Website Saya</h1>
-            </div>
+            <!-- sidebarTitle tetap di sini -->
+            <h1 id="sidebarTitle" class="text-xl font-semibold sidebar-text whitespace-nowrap overflow-hidden sidebar-title">Website Saya</h1>
         </header>
         <nav class="p-4 sidebar-nav">
             <ul class="space-y-2" id="sidebarMenu">
@@ -32,8 +28,15 @@
 
     <!-- Konten Utama -->
     <main id="mainContent" class="px-6 min-h-screen ml-64 md:ml-64 transition-all duration-300 ease-in-out main-content-wrapper">
+        <!-- New Header for mobile toggle and main content title -->
+        <header id="mainHeader" class="fixed top-0 left-0 md:left-64 right-0 bg-white border-b border-gray-200 py-3 px-4 z-30 transition-all duration-300 ease-in-out flex items-center">
+            <button id="sidebarToggle" class="p-2 hover:bg-gray-100 rounded md:hidden">
+                <span class="material-icons text-xl">menu</span>
+            </button>
+            <h2 id="mainContentTitle" class="text-xl font-semibold ml-4 md:ml-0">Beranda</h2> <!-- Dynamic title for main content -->
+        </header>
         <div class="max-w-6xl mx-auto py-8 dynamic-content-area" id="dynamicContent">
-            <!-- Konten akan dimuat secara dinamis di sini -->
+            <!-- Content will be loaded dynamically here -->
             <div class="text-center py-10">
                 <p class="text-gray-500">Memuat konten...</p>
             </div>
