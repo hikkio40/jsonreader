@@ -1,18 +1,18 @@
 const DOMElements = {
-    sidebarToggle: document.getElementById('sidebarToggle'), // Kembali ke DOM statis
-    sidebar: document.getElementById('sidebar'),
+    sidebarToggle: document.getElementById('sidebarToggle'),
+    mainAppHeader: document.getElementById('mainAppHeader'), // New static header
+    mainTitle: document.getElementById('mainTitle'),         // Title in new header
     mainContent: document.getElementById('mainContent'),
     dynamicContent: document.getElementById('dynamicContent'),
     overlay: document.getElementById('overlay'),
-    sidebarTitle: document.getElementById('sidebarTitle'),
-    sidebarMenu: document.getElementById('sidebarMenu'),
-    // mainHeader dan mainContentTitle tidak lagi diperlukan di DOMElements
+    // sidebar (TOC) will be dynamically created/removed
+    tocSidebar: null, // Reference to the dynamically created TOC sidebar
 };
 
 const appState = {
-    isCollapsed: false,
     isMobile: false,
-    currentView: 'home',
+    isTocSidebarOpen: false, // Tracks if TOC sidebar is open (mainly for mobile)
+    currentView: 'home', // 'home', 'series-detail', 'volume-read'
     currentSeriesId: null,
     currentVolumeId: null,
     currentChapterIndex: 0,
@@ -87,82 +87,83 @@ const uiService = {
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
-    // Fungsi ini tidak lagi diperlukan karena judul akan ada di dalam konten
-    // setMainContentTitle(title) {
-    //     // DOMElements.mainContentTitle tidak lagi ada
-    // },
-
-    renderMainMenuSidebar() {
-        DOMElements.sidebarTitle.textContent = 'Website Saya';
-        DOMElements.sidebarMenu.innerHTML = `
-            <ul class="space-y-2">
-                <li class="sidebar-menu-item">
-                    <a href="#" onclick="navigationService.renderHomepage()" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                        <span class="material-icons text-xl flex-shrink-0">home</span>
-                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Beranda</span>
-                    </a>
-                </li>
-                <li class="sidebar-menu-item">
-                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                        <span class="material-icons text-xl flex-shrink-0">favorite</span>
-                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Favorit</span>
-                    </a>
-                </li>
-                <li class="sidebar-menu-item">
-                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                        <span class="material-icons text-xl flex-shrink-0">category</span>
-                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Kategori</span>
-                    </a>
-                </li>
-                <li class="sidebar-menu-item">
-                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                        <span class="material-icons text-xl flex-shrink-0">perm_media</span>
-                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Media</span>
-                    </a>
-                </li>
-                <li class="sidebar-menu-item">
-                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                        <span class="material-icons text-xl flex-shrink-0">people</span>
-                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengguna</span>
-                    </a>
-                </li>
-            </ul>
-            <ul class="space-y-2 mt-auto">
-                <li class="sidebar-menu-item">
-                    <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                        <span class="material-icons text-xl flex-shrink-0">settings</span>
-                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengaturan</span>
-                    </a>
-                </li>
-            </ul>
-        `;
+    setMainTitle(title) {
+        DOMElements.mainTitle.textContent = title;
     },
 
-    setupVolumeSidebar(chapters) {
-        DOMElements.sidebarTitle.textContent = 'Daftar Isi Volume';
-        let chaptersHtml = `
-            <li class="sidebar-menu-item">
-                <a href="#" onclick="navigationService.showSeriesDetail('${appState.currentSeriesId}')" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons mr-2">arrow_back</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Kembali ke Seri</span>
-                </a>
-            </li>
-            <li class="border-t border-gray-200 my-2 sidebar-divider"></li>
-        `;
-        
+    // This function now specifically creates and manages the TOC sidebar
+    createTocSidebar(chapters) {
+        if (DOMElements.tocSidebar) {
+            DOMElements.tocSidebar.remove(); // Remove existing if any
+            DOMElements.tocSidebar = null;
+        }
+
+        const tocSidebarElement = document.createElement('aside');
+        tocSidebarElement.id = 'tocSidebar';
+        tocSidebarElement.classList.add('app-sidebar'); // Use a common class for styling
+
+        let chaptersHtml = ``;
         chapters.forEach((chapter, index) => {
-            const isActive = index === appState.currentChapterIndex ? 'bg-blue-100 text-blue-600' : '';
+            const isActive = index === appState.currentChapterIndex ? 'active' : '';
             chaptersHtml += `
-                <li class="sidebar-menu-item">
-                    <a href="#" onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index})" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded ${isActive}">
-                        <span class="material-icons text-xl flex-shrink-0">menu_book</span>
-                        <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden text-sm">${chapter.judul}</span>
+                <li class="toc-menu-item">
+                    <a href="#" onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); return false;" class="flex items-center ${isActive}">
+                        <span class="material-icons text-xl flex-shrink-0 mr-2">menu_book</span>
+                        <span class="text-sm">${chapter.judul}</span>
                     </a>
                 </li>
             `;
         });
-        
-        DOMElements.sidebarMenu.innerHTML = chaptersHtml;
+
+        tocSidebarElement.innerHTML = `
+            <header class="toc-header">
+                <h2 class="text-xl font-semibold">Daftar Isi Volume</h2>
+                <button id="closeTocSidebar" class="p-2 hover:bg-gray-100 rounded md:hidden">
+                    <span class="material-icons text-xl">close</span>
+                </button>
+            </header>
+            <nav class="toc-nav">
+                <ul class="space-y-2">
+                    <li class="toc-menu-item">
+                        <a href="#" onclick="navigationService.showSeriesDetail('${appState.currentSeriesId}'); return false;" class="flex items-center">
+                            <span class="material-icons mr-2">arrow_back</span>
+                            Kembali ke Seri
+                        </a>
+                    </li>
+                    <li class="border-t border-gray-200 my-2"></li>
+                    ${chaptersHtml}
+                </ul>
+            </nav>
+        `;
+
+        document.body.appendChild(tocSidebarElement);
+        DOMElements.tocSidebar = tocSidebarElement;
+
+        // Attach event listener for close button
+        const closeButton = document.getElementById('closeTocSidebar');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => app.toggleTocSidebar(false));
+        }
+
+        // Ensure it's hidden on mobile initially if not explicitly opened
+        if (appState.isMobile) {
+            DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+        }
+    },
+
+    removeTocSidebar() {
+        if (DOMElements.tocSidebar) {
+            DOMElements.tocSidebar.remove();
+            DOMElements.tocSidebar = null;
+            appState.isTocSidebarOpen = false; // Reset state
+        }
+    },
+
+    renderMainMenuContent() {
+        // This is for homepage and series detail, no sidebar needed.
+        // The mainTitle in mainAppHeader will serve as the primary title.
+        // The dynamicContent will hold the main content.
+        // This function doesn't render the sidebar itself.
     },
 
     async renderHomepageContent(seriesIndex) {
@@ -199,6 +200,7 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
+        uiService.setMainTitle('Beranda');
     },
 
     async renderSeriesDetailContent(info, volumes) {
@@ -229,7 +231,7 @@ const uiService = {
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
                             ${info.cover ? `<img src="${info.cover}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>`}
+                        </svg>`}
                         </div>
                     </div>
                     
@@ -270,6 +272,7 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
+        uiService.setMainTitle(info.judul);
     },
 
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
@@ -334,6 +337,7 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
+        uiService.setMainTitle(chapterData.judul);
     }
 };
 
@@ -344,8 +348,8 @@ const navigationService = {
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        uiService.renderMainMenuSidebar();
-        app.checkMobile();
+        uiService.removeTocSidebar(); // Ensure TOC sidebar is removed
+        app.checkMobile(); // Adjust layout for homepage
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
@@ -359,15 +363,13 @@ const navigationService = {
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        app.checkMobile();
+        uiService.removeTocSidebar(); // Ensure TOC sidebar is removed
+        app.checkMobile(); // Adjust layout for series detail
 
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
 
         if (!info || !volumes) return;
-
-        uiService.renderMainMenuSidebar();
-        DOMElements.sidebarTitle.textContent = 'Detail Seri';
 
         uiService.renderSeriesDetailContent(info, volumes);
     },
@@ -378,7 +380,7 @@ const navigationService = {
         appState.currentVolumeId = volumeId;
         appState.currentChapterIndex = 0;
 
-        app.checkMobile();
+        app.checkMobile(); // Adjust layout for volume view
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
         if (!volumeData) return;
@@ -386,7 +388,9 @@ const navigationService = {
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
 
-        uiService.setupVolumeSidebar(volumeData.bab);
+        uiService.createTocSidebar(volumeData.bab); // Create and populate TOC sidebar
+        app.toggleTocSidebar(true); // Ensure it's visible (especially on desktop)
+
         navigationService.showChapter(seriesId, volumeId, 0);
     },
 
@@ -400,8 +404,10 @@ const navigationService = {
             return;
         }
 
-        uiService.setupVolumeSidebar(appState.currentVolumeChapters);
-        app.checkMobile();
+        uiService.createTocSidebar(appState.currentVolumeChapters); // Re-create/update TOC sidebar with active chapter
+        app.toggleTocSidebar(true); // Ensure it's visible
+
+        app.checkMobile(); // Adjust layout for chapter view
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
         if (!chapterData) return;
@@ -414,30 +420,44 @@ const app = {
     // Fungsi untuk menerapkan kelas tata letak berdasarkan status mobile/collapsed
     applyLayoutClasses() {
         if (appState.isMobile) {
-            // Mobile: Sidebar tersembunyi secara default, konten utama penuh
-            DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
+            // Mobile: Konten utama penuh
             DOMElements.mainContent.classList.add('main-mobile-full');
-            DOMElements.overlay.classList.add('hidden');
-            // DOMElements.mainContent.style.paddingTop = '56px'; // Tidak lagi diperlukan karena tombol toggle di luar flow konten
-
-            // Pastikan tombol toggle terlihat di mobile
+            DOMElements.mainContent.style.marginLeft = '0'; // Pastikan margin kiri 0 di mobile
+            DOMElements.mainAppHeader.style.left = '0'; // Header selalu di kiri di mobile
+            
+            // Atur visibilitas tombol toggle di header utama
             DOMElements.sidebarToggle.style.display = 'block';
+
+            // Atur sidebar TOC (jika ada)
+            if (DOMElements.tocSidebar) {
+                if (appState.isTocSidebarOpen) {
+                    DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+                    DOMElements.overlay.classList.remove('hidden');
+                } else {
+                    DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+                    DOMElements.overlay.classList.add('hidden');
+                }
+            } else {
+                DOMElements.overlay.classList.add('hidden'); // Sembunyikan overlay jika tidak ada sidebar TOC
+            }
+
         } else {
-            // Desktop: Sidebar terlihat, konten utama menyesuaikan
-            DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
+            // Desktop: Konten utama menyesuaikan dengan sidebar TOC (jika ada)
             DOMElements.mainContent.classList.remove('main-mobile-full');
             DOMElements.overlay.classList.add('hidden'); // Overlay selalu tersembunyi di desktop
-            // DOMElements.mainContent.style.paddingTop = '0'; // Tidak lagi diperlukan
 
             // Sembunyikan tombol toggle di desktop
             DOMElements.sidebarToggle.style.display = 'none';
-            
-            if (appState.isCollapsed) {
-                DOMElements.mainContent.classList.remove('ml-64');
-                DOMElements.mainContent.classList.add('ml-16');
+
+            if (DOMElements.tocSidebar) {
+                // Jika sidebar TOC ada, pastikan terlihat dan sesuaikan margin konten utama
+                DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+                DOMElements.mainContent.style.marginLeft = '256px'; // Lebar sidebar TOC
+                DOMElements.mainAppHeader.style.left = '256px'; // Header utama bergeser
             } else {
-                DOMElements.mainContent.classList.remove('ml-16');
-                DOMElements.mainContent.classList.add('ml-64');
+                // Jika tidak ada sidebar TOC, konten utama penuh
+                DOMElements.mainContent.style.marginLeft = '0';
+                DOMElements.mainAppHeader.style.left = '0'; // Header utama di kiri
             }
         }
     },
@@ -451,31 +471,34 @@ const app = {
         }
     },
 
-    toggleSidebar() {
+    // Fungsi untuk mengelola pembukaan/penutupan sidebar TOC
+    toggleTocSidebar(forceState = null) {
+        if (!DOMElements.tocSidebar) return; // Tidak ada sidebar TOC untuk di-toggle
+
+        const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
+        appState.isTocSidebarOpen = newState;
+
         if (appState.isMobile) {
-            // Perilaku mobile: Toggle sidebar dan overlay
-            if (DOMElements.sidebar.classList.contains('sidebar-mobile-hidden')) {
-                DOMElements.sidebar.classList.remove('sidebar-mobile-hidden');
+            if (newState) {
+                DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
                 DOMElements.overlay.classList.remove('hidden');
             } else {
-                DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
+                DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
                 DOMElements.overlay.classList.add('hidden');
             }
         } else {
-            // Perilaku desktop: Toggle sidebar collapsed state
-            appState.isCollapsed = !appState.isCollapsed;
-            app.applyLayoutClasses(); // Terapkan kelas layout berdasarkan status baru
+            // Di desktop, sidebar TOC selalu terlihat jika ada
+            DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+            DOMElements.overlay.classList.add('hidden');
         }
     },
 
     setupEventListeners() {
-        // Event listener untuk sidebarToggle sekarang dipasang di sini karena statis
-        DOMElements.sidebarToggle.addEventListener('click', app.toggleSidebar);
+        DOMElements.sidebarToggle.addEventListener('click', () => app.toggleTocSidebar());
 
         DOMElements.overlay.addEventListener('click', function() {
             if (appState.isMobile) {
-                DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
-                DOMElements.overlay.classList.add('hidden');
+                app.toggleTocSidebar(false); // Tutup sidebar TOC saat overlay diklik di mobile
             }
         });
 
@@ -483,17 +506,14 @@ const app = {
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                if (appState.isMobile && !DOMElements.sidebar.classList.contains('sidebar-mobile-hidden')) {
-                    DOMElements.sidebar.classList.add('sidebar-mobile-hidden');
-                    DOMElements.overlay.classList.add('hidden');
-                } else if (!appState.isMobile && appState.isCollapsed) {
-                    app.toggleSidebar();
+                if (appState.isMobile && appState.isTocSidebarOpen) {
+                    app.toggleTocSidebar(false);
                 }
             }
         });
 
         document.addEventListener('DOMContentLoaded', function() {
-            app.checkMobile(); // Initial check and layout application
+            app.checkMobile();
             navigationService.renderHomepage();
         });
     }
