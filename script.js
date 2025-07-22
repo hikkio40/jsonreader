@@ -86,21 +86,15 @@ const uiService = {
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
-    // setMainTitle tidak lagi diperlukan karena judul utama statis di mainAppHeader
-    // setMainTitle(title) {
-    //     DOMElements.mainTitle.textContent = title;
-    // },
-
-    // Fungsi ini sekarang secara spesifik membuat dan mengelola sidebar TOC
     createTocSidebar(chapters) {
         if (DOMElements.tocSidebar) {
-            DOMElements.tocSidebar.remove(); // Hapus yang sudah ada jika ada
+            DOMElements.tocSidebar.remove(); // Remove existing if any
             DOMElements.tocSidebar = null;
         }
 
         const tocSidebarElement = document.createElement('aside');
         tocSidebarElement.id = 'tocSidebar';
-        tocSidebarElement.classList.add('app-sidebar'); // Gunakan kelas umum untuk styling
+        tocSidebarElement.classList.add('app-sidebar'); // Use a common class for styling
 
         let chaptersHtml = ``;
         chapters.forEach((chapter, index) => {
@@ -139,13 +133,13 @@ const uiService = {
         document.body.appendChild(tocSidebarElement);
         DOMElements.tocSidebar = tocSidebarElement;
 
-        // Pasang event listener untuk tombol tutup
+        // Attach event listener for close button
         const closeButton = document.getElementById('closeTocSidebar');
         if (closeButton) {
             closeButton.addEventListener('click', () => app.toggleTocSidebar(false));
         }
 
-        // Pastikan tersembunyi di mobile secara default jika tidak dibuka secara eksplisit
+        // Ensure it's hidden on mobile initially if not explicitly opened
         if (appState.isMobile) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
         }
@@ -313,12 +307,8 @@ const uiService = {
             </div>
             
             <div class="chapter-content-wrapper">
-                <h1 class="text-3xl font-bold mb-6 volume-title">${volumeData.judul_volume || 'Judul Volume'}</h1>
-                
-                <div class="prose max-w-none text-justify leading-relaxed chapter-main-text">
-                    <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
-                    ${chapterContentHtml}
-                </div>
+                <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
+                ${chapterContentHtml}
                 
                 <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
                     <div>${prevButton}</div>
@@ -377,7 +367,14 @@ const navigationService = {
         appState.currentVolumeData = volumeData;
 
         uiService.createTocSidebar(volumeData.bab); // Buat dan isi TOC sidebar
-        app.toggleTocSidebar(true); // Pastikan terlihat (terutama di desktop)
+
+        // Hanya toggle sidebar terbuka jika di desktop
+        if (!appState.isMobile) {
+            app.toggleTocSidebar(true);
+        } else {
+            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
+            app.toggleTocSidebar(false);
+        }
 
         navigationService.showChapter(seriesId, volumeId, 0);
     },
@@ -393,7 +390,14 @@ const navigationService = {
         }
 
         uiService.createTocSidebar(appState.currentVolumeChapters); // Buat/perbarui TOC sidebar dengan bab aktif
-        app.toggleTocSidebar(true); // Pastikan terlihat
+
+        // Hanya toggle sidebar terbuka jika di desktop
+        if (!appState.isMobile) {
+            app.toggleTocSidebar(true);
+        } else {
+            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
+            app.toggleTocSidebar(false);
+        }
 
         app.applyLayoutClasses(); // Sesuaikan layout untuk tampilan bab
 
@@ -401,11 +405,13 @@ const navigationService = {
         if (!chapterData) return;
 
         uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
+
+        // Scroll to top after rendering chapter content
+        DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
 const app = {
-    // Fungsi untuk menerapkan kelas tata letak berdasarkan status mobile/collapsed
     applyLayoutClasses() {
         if (appState.isMobile) {
             // Mobile: Konten utama penuh
@@ -463,7 +469,8 @@ const app = {
 
     // Fungsi untuk mengelola pembukaan/penutupan sidebar TOC
     toggleTocSidebar(forceState = null) {
-        if (!DOMElements.tocSidebar) return; // Tidak ada sidebar TOC untuk di-toggle
+        // Hanya beroperasi jika sidebar TOC sudah ada
+        if (!DOMElements.tocSidebar) return;
 
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
         appState.isTocSidebarOpen = newState;
