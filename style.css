@@ -7,94 +7,111 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
-.sidebar-collapsed {
-    width: 64px !important;
-}
-.sidebar-text {
-    transition: opacity 0.3s ease;
-}
-.sidebar-collapsed .sidebar-text {
-    opacity: 0;
-    pointer-events: none;
-    margin-left: 0 !important;
+
+/* Gaya untuk Header Utama Aplikasi */
+#mainAppHeader {
+    height: 56px; /* Tinggi header */
 }
 
-.sidebar-collapsed .sidebar-menu-item a {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 16px 0 !important;
-    width: 100%;
-}
-
-/* Penyesuaian untuk memposisikan "Pengaturan" di bagian bawah sidebar */
-.app-sidebar {
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-nav {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-#sidebarMenu {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-/* Gaya untuk Tombol Toggle Sidebar */
-#sidebarToggle {
-    top: 1rem; /* Sesuaikan posisi vertikal */
-    left: 1rem; /* Sesuaikan posisi horizontal */
-    background-color: white;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Tambahkan sedikit bayangan agar menonjol */
-    transition: left 0.3s ease-in-out; /* Transisi untuk pergerakan di desktop */
-}
-
-/* Penyesuaian konten utama */
+/* Penyesuaian padding konten utama agar tidak tertutup header */
 .main-content-wrapper {
-    padding-top: 0; /* Tidak ada header tetap di konten utama */
-    margin-left: 256px; /* Default desktop: sidebar terbuka (64px * 4) */
+    padding-top: 56px; /* Tinggi #mainAppHeader */
+    margin-left: 0; /* Default tanpa sidebar */
 }
 
-/* Desktop-specific adjustments */
+/* Gaya untuk Sidebar TOC (dinamis) */
+#tocSidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 256px; /* Lebar sidebar TOC */
+    background-color: white;
+    border-right: 1px solid #e5e7eb;
+    transition: transform 0.3s ease-in-out;
+    z-index: 50; /* Lebih tinggi dari overlay */
+    display: flex;
+    flex-direction: column;
+}
+
+#tocSidebar.toc-sidebar-hidden {
+    transform: translateX(-100%);
+}
+
+#tocSidebar .toc-header {
+    background-color: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#tocSidebar .toc-nav {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+#tocSidebar .toc-menu-item a {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 0.25rem; /* rounded */
+    transition: background-color 0.15s ease-in-out;
+}
+
+#tocSidebar .toc-menu-item a:hover {
+    background-color: #f3f4f6; /* hover:bg-gray-100 */
+}
+
+#tocSidebar .toc-menu-item a.active {
+    background-color: #e0f2fe; /* bg-blue-100 */
+    color: #2563eb; /* text-blue-600 */
+}
+
+/* Desktop Styles */
 @media (min-width: 768px) {
-    /* Tombol toggle bergerak bersama sidebar */
-    #sidebarToggle {
-        left: 256px; /* Posisi saat sidebar terbuka (sama dengan lebar sidebar) */
-    }
-    /* Konten utama menyesuaikan saat sidebar diciutkan */
-    .sidebar-collapsed + .main-content-wrapper {
-        margin-left: 64px; /* Margin saat sidebar diciutkan */
-    }
-    /* Tombol toggle juga menyesuaikan saat sidebar diciutkan */
-    .sidebar-collapsed #sidebarToggle {
-        left: 64px; /* Posisi saat sidebar diciutkan */
-    }
-}
-
-/* Mobile-specific adjustments */
-@media (max-width: 767px) {
-    .sidebar-mobile-hidden {
-        transform: translateX(-100%);
+    #mainAppHeader {
+        left: 256px; /* Pindah ke kanan saat sidebar TOC terbuka */
     }
     .main-content-wrapper {
-        margin-left: 0 !important; /* Konten utama mengambil lebar penuh di mobile */
+        margin-left: 256px; /* Konten utama bergeser untuk sidebar TOC */
     }
-    /* Tombol toggle selalu di kiri atas di mobile, tidak bergerak */
     #sidebarToggle {
-        left: 1rem;
+        display: none; /* Sembunyikan toggle di desktop */
     }
-    /* Sidebar tersembunyi di mobile secara default, overlay juga tersembunyi */
-    .app-sidebar.sidebar-mobile-hidden + .app-overlay {
-        display: none;
+    #tocSidebar.toc-sidebar-hidden {
+        transform: translateX(0); /* Pastikan sidebar TOC terlihat di desktop */
     }
-    /* Tampilkan overlay saat sidebar terbuka di mobile */
-    .app-sidebar:not(.sidebar-mobile-hidden) + .app-overlay {
-        display: block;
+}
+
+/* Mobile Styles */
+@media (max-width: 767px) {
+    #mainAppHeader {
+        left: 0; /* Header selalu di kiri di mobile */
+    }
+    .main-content-wrapper {
+        margin-left: 0; /* Konten utama selalu penuh di mobile */
+    }
+    #sidebarToggle {
+        display: block; /* Tampilkan toggle di mobile */
+    }
+    #tocSidebar {
+        transform: translateX(-100%); /* Sembunyikan sidebar TOC secara default di mobile */
+    }
+    #tocSidebar.toc-sidebar-hidden {
+        transform: translateX(-100%); /* Pastikan tersembunyi */
+    }
+    #tocSidebar:not(.toc-sidebar-hidden) {
+        transform: translateX(0); /* Tampilkan saat tidak tersembunyi */
+    }
+    .app-overlay {
+        display: none; /* Default hidden */
+    }
+    #tocSidebar:not(.toc-sidebar-hidden) + .app-overlay {
+        display: block; /* Tampilkan overlay saat sidebar TOC terbuka */
     }
 }
