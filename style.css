@@ -13,9 +13,6 @@
     height: 56px; /* Tinggi header */
     /* Padding dan flex properties dipindahkan ke div di dalamnya */
 }
-#mainAppHeader > div { /* Inner div for max-width and content alignment */
-    padding: 0 1rem; /* Tailwind px-4 becomes 1rem */
-}
 
 
 /* Penyesuaian padding konten utama agar tidak tertutup header */
