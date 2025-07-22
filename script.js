@@ -97,8 +97,8 @@ const uiService = {
             </li>
             <li class="sidebar-menu-item">
                 <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
-                    <span class="material-icons text-xl flex-shrink-0">article</span>
-                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Artikel</span>
+                    <span class="material-icons text-xl flex-shrink-0">favorite</span>
+                    <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Favorit</span>
                 </a>
             </li>
             <li class="sidebar-menu-item">
@@ -119,7 +119,7 @@ const uiService = {
                     <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengguna</span>
                 </a>
             </li>
-            <li class="sidebar-menu-item">
+            <li class="sidebar-menu-item mt-auto"> <!-- Added mt-auto for pushing to bottom -->
                 <a href="#" class="flex items-center py-2 px-3 hover:bg-gray-100 rounded">
                     <span class="material-icons text-xl flex-shrink-0">settings</span>
                     <span class="sidebar-text ml-3 whitespace-nowrap overflow-hidden">Pengaturan</span>
@@ -158,7 +158,6 @@ const uiService = {
     async renderHomepageContent(seriesIndex) {
         let seriesHtml = ``;
         seriesIndex.forEach(series => {
-            // Menentukan warna badge berdasarkan format
             let badgeColorClass = '';
             if (series.format === 'Light Novel') {
                 badgeColorClass = 'bg-blue-500';
@@ -167,7 +166,7 @@ const uiService = {
             } else if (series.format === 'Web Novel') {
                 badgeColorClass = 'bg-purple-500';
             } else {
-                badgeColorClass = 'bg-gray-500'; // Default jika format tidak dikenal
+                badgeColorClass = 'bg-gray-500';
             }
 
             seriesHtml += `
