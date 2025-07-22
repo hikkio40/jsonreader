@@ -34,12 +34,15 @@ const dataService = {
             // Menggunakan jalur relatif karena file akan di-host bersama
             const response = await fetch(path);
             if (!response.ok) {
+                // Jika respons bukan OK (misal: 404 Not Found), lemparkan error
                 throw new Error(`Gagal memuat ${path}: ${response.statusText}`);
             }
+            // Mengembalikan respons JSON
             return await response.json();
         } catch (error) {
             console.error('Error fetching JSON:', error);
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat konten. ${error.message}</div>`;
+            // Mengganti pesan error menjadi lebih profesional dan umum
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
             return null;
         }
     },
