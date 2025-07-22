@@ -1,11 +1,10 @@
 const DOMElements = {
     sidebarToggle: document.getElementById('sidebarToggle'),
-    mainAppHeader: document.getElementById('mainAppHeader'), // New static header
-    mainTitle: document.getElementById('mainTitle'),         // Title in new header
+    mainAppHeader: document.getElementById('mainAppHeader'),
+    mainTitle: document.getElementById('mainTitle'),
     mainContent: document.getElementById('mainContent'),
     dynamicContent: document.getElementById('dynamicContent'),
     overlay: document.getElementById('overlay'),
-    // sidebar (TOC) will be dynamically created/removed
     tocSidebar: null, // Reference to the dynamically created TOC sidebar
 };
 
@@ -87,20 +86,21 @@ const uiService = {
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
-    setMainTitle(title) {
-        DOMElements.mainTitle.textContent = title;
-    },
+    // setMainTitle tidak lagi diperlukan karena judul utama statis di mainAppHeader
+    // setMainTitle(title) {
+    //     DOMElements.mainTitle.textContent = title;
+    // },
 
-    // This function now specifically creates and manages the TOC sidebar
+    // Fungsi ini sekarang secara spesifik membuat dan mengelola sidebar TOC
     createTocSidebar(chapters) {
         if (DOMElements.tocSidebar) {
-            DOMElements.tocSidebar.remove(); // Remove existing if any
+            DOMElements.tocSidebar.remove(); // Hapus yang sudah ada jika ada
             DOMElements.tocSidebar = null;
         }
 
         const tocSidebarElement = document.createElement('aside');
         tocSidebarElement.id = 'tocSidebar';
-        tocSidebarElement.classList.add('app-sidebar'); // Use a common class for styling
+        tocSidebarElement.classList.add('app-sidebar'); // Gunakan kelas umum untuk styling
 
         let chaptersHtml = ``;
         chapters.forEach((chapter, index) => {
@@ -139,13 +139,13 @@ const uiService = {
         document.body.appendChild(tocSidebarElement);
         DOMElements.tocSidebar = tocSidebarElement;
 
-        // Attach event listener for close button
+        // Pasang event listener untuk tombol tutup
         const closeButton = document.getElementById('closeTocSidebar');
         if (closeButton) {
             closeButton.addEventListener('click', () => app.toggleTocSidebar(false));
         }
 
-        // Ensure it's hidden on mobile initially if not explicitly opened
+        // Pastikan tersembunyi di mobile secara default jika tidak dibuka secara eksplisit
         if (appState.isMobile) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
         }
@@ -157,13 +157,6 @@ const uiService = {
             DOMElements.tocSidebar = null;
             appState.isTocSidebarOpen = false; // Reset state
         }
-    },
-
-    renderMainMenuContent() {
-        // This is for homepage and series detail, no sidebar needed.
-        // The mainTitle in mainAppHeader will serve as the primary title.
-        // The dynamicContent will hold the main content.
-        // This function doesn't render the sidebar itself.
     },
 
     async renderHomepageContent(seriesIndex) {
@@ -200,7 +193,6 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
-        uiService.setMainTitle('Beranda');
     },
 
     async renderSeriesDetailContent(info, volumes) {
@@ -272,7 +264,6 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
-        uiService.setMainTitle(info.judul);
     },
 
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
@@ -337,7 +328,6 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
-        uiService.setMainTitle(chapterData.judul);
     }
 };
 
@@ -348,8 +338,8 @@ const navigationService = {
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        uiService.removeTocSidebar(); // Ensure TOC sidebar is removed
-        app.checkMobile(); // Adjust layout for homepage
+        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
+        app.applyLayoutClasses(); // Sesuaikan layout untuk homepage
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
@@ -363,8 +353,8 @@ const navigationService = {
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        uiService.removeTocSidebar(); // Ensure TOC sidebar is removed
-        app.checkMobile(); // Adjust layout for series detail
+        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
+        app.applyLayoutClasses(); // Sesuaikan layout untuk detail seri
 
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
@@ -380,16 +370,14 @@ const navigationService = {
         appState.currentVolumeId = volumeId;
         appState.currentChapterIndex = 0;
 
-        app.checkMobile(); // Adjust layout for volume view
-
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
         if (!volumeData) return;
 
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
 
-        uiService.createTocSidebar(volumeData.bab); // Create and populate TOC sidebar
-        app.toggleTocSidebar(true); // Ensure it's visible (especially on desktop)
+        uiService.createTocSidebar(volumeData.bab); // Buat dan isi TOC sidebar
+        app.toggleTocSidebar(true); // Pastikan terlihat (terutama di desktop)
 
         navigationService.showChapter(seriesId, volumeId, 0);
     },
@@ -404,10 +392,10 @@ const navigationService = {
             return;
         }
 
-        uiService.createTocSidebar(appState.currentVolumeChapters); // Re-create/update TOC sidebar with active chapter
-        app.toggleTocSidebar(true); // Ensure it's visible
+        uiService.createTocSidebar(appState.currentVolumeChapters); // Buat/perbarui TOC sidebar dengan bab aktif
+        app.toggleTocSidebar(true); // Pastikan terlihat
 
-        app.checkMobile(); // Adjust layout for chapter view
+        app.applyLayoutClasses(); // Sesuaikan layout untuk tampilan bab
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
         if (!chapterData) return;
@@ -454,10 +442,12 @@ const app = {
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
                 DOMElements.mainContent.style.marginLeft = '256px'; // Lebar sidebar TOC
                 DOMElements.mainAppHeader.style.left = '256px'; // Header utama bergeser
+                document.body.classList.add('toc-active'); // Tambahkan kelas ke body untuk CSS
             } else {
                 // Jika tidak ada sidebar TOC, konten utama penuh
                 DOMElements.mainContent.style.marginLeft = '0';
                 DOMElements.mainAppHeader.style.left = '0'; // Header utama di kiri
+                document.body.classList.remove('toc-active'); // Hapus kelas dari body
             }
         }
     },
