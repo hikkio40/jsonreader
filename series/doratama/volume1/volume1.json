@@ -1,0 +1,14 @@
+{
+  "bab": [
+    {
+      "id": "bab1",
+      "judul": "Bab 1 - Percobaan",
+      "file": "bab1.json" 
+    },
+    {
+      "id": "bab2",
+      "judul": "Bab 2 - Anjay",
+      "file": "bab2.json"
+    }
+  ]
+}
