@@ -60,18 +60,6 @@ const dataService = {
 // --- UI Service: Mengelola rendering UI dan manipulasi DOM ---
 const uiService = {
     /**
-     * Menampilkan indikator loading di area konten dinamis.
-     */
-    showLoading() {
-        DOMElements.dynamicContent.innerHTML = `
-            <div class="flex justify-center items-center h-64">
-                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-                <p class="ml-4 text-gray-600">Memuat...</p>
-            </div>
-        `;
-    },
-
-    /**
      * Merender menu utama di sidebar.
      */
     renderMainMenuSidebar() {
@@ -151,7 +139,11 @@ const uiService = {
      * Merender konten halaman beranda (daftar seri).
      * @param {Array<Object>} seriesIndex - Daftar objek seri.
      */
-    renderHomepageContent(seriesIndex) {
+    async renderHomepageContent(seriesIndex) {
+        // Tambahkan fade-out sebelum mengganti konten
+        DOMElements.dynamicContent.classList.add('fade-out');
+        await new Promise(resolve => setTimeout(resolve, 300)); // Tunggu transisi selesai
+
         let seriesHtml = ``;
         seriesIndex.forEach(series => {
             seriesHtml += `
@@ -172,6 +164,7 @@ const uiService = {
                 ${seriesHtml}
             </div>
         `;
+        DOMElements.dynamicContent.classList.remove('fade-out'); // Hapus fade-out untuk efek fade-in
     },
 
     /**
@@ -179,7 +172,11 @@ const uiService = {
      * @param {Object} info - Data info seri.
      * @param {Array<Object>} volumes - Daftar objek volume.
      */
-    renderSeriesDetailContent(info, volumes) {
+    async renderSeriesDetailContent(info, volumes) {
+        // Tambahkan fade-out sebelum mengganti konten
+        DOMElements.dynamicContent.classList.add('fade-out');
+        await new Promise(resolve => setTimeout(resolve, 300)); // Tunggu transisi selesai
+
         let volumesHtml = '';
         volumes.forEach(volume => {
             volumesHtml += `
@@ -251,6 +248,7 @@ const uiService = {
                 </div>
             </div>
         `;
+        DOMElements.dynamicContent.classList.remove('fade-out'); // Hapus fade-out untuk efek fade-in
     },
 
     /**
@@ -260,7 +258,11 @@ const uiService = {
      * @param {number} chapterIndex - Indeks bab saat ini.
      * @param {number} totalChapters - Total bab dalam volume.
      */
-    renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
+    async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
+        // Tambahkan fade-out sebelum mengganti konten
+        DOMElements.dynamicContent.classList.add('fade-out');
+        await new Promise(resolve => setTimeout(resolve, 300)); // Tunggu transisi selesai
+
         let chapterContentHtml = '';
         chapterData.konten.forEach(item => {
             if (item.paragraf) {
@@ -322,6 +324,7 @@ const uiService = {
                 </div>
             </div>
         `;
+        DOMElements.dynamicContent.classList.remove('fade-out'); // Hapus fade-out untuk efek fade-in
     }
 };
 
@@ -339,7 +342,7 @@ const navigationService = {
         uiService.renderMainMenuSidebar(); // Pastikan sidebar menampilkan menu utama
         
         app.checkMobile();
-        uiService.showLoading();
+        // uiService.showLoading(); // Dihapus, diganti dengan transisi
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
@@ -365,7 +368,7 @@ const navigationService = {
         }
         DOMElements.overlay.classList.add('hidden');
 
-        uiService.showLoading();
+        // uiService.showLoading(); // Dihapus, diganti dengan transisi
 
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
@@ -398,7 +401,7 @@ const navigationService = {
         }
         DOMElements.overlay.classList.add('hidden');
 
-        uiService.showLoading();
+        // uiService.showLoading(); // Dihapus, diganti dengan transisi
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
         if (!volumeData) return;
@@ -428,7 +431,7 @@ const navigationService = {
         }
 
         uiService.setupVolumeSidebar(appState.currentVolumeChapters); // Perbarui sidebar untuk menyorot bab saat ini
-        uiService.showLoading();
+        // uiService.showLoading(); // Dihapus, diganti dengan transisi
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
         if (!chapterData) return;
