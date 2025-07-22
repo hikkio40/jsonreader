@@ -1,223 +1,55 @@
-/* Mengatur font Inter sebagai font utama */
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #ffffff; /* Latar belakang putih bersih */
-    color: #1a202c; /* Warna teks default */
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Memastikan footer di bagian bawah */
-}
-/* Menghilangkan shadow dan membuat tampilan kaku/minimalis */
-.no-shadow {
+/* Mengatur ulang box-shadow untuk semua elemen */
+* {
     box-shadow: none !important;
 }
-/* Styling untuk grid post */
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Kolom responsif */
-    gap: 1.5rem; /* Jarak antar item grid */
-    padding: 1.5rem;
-    max-width: 1200px; /* Lebar maksimum konten */
-    margin: 0 auto; /* Pusatkan konten */
-}
-.post-card {
-    border: 1px solid #e2e8f0; /* Border tipis untuk kesan kaku */
-    border-radius: 0; /* Tanpa rounded corners */
+/* Membatasi teks ke dua baris dengan elipsis */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    background-color: #ffffff;
-    transition: transform 0.1s ease-in-out; /* Transisi untuk efek hover */
 }
-.post-card:hover {
-    transform: translateY(-2px); /* Efek sedikit naik saat hover */
+/* Mengatur lebar sidebar saat diciutkan */
+.sidebar-collapsed {
+    width: 64px !important;
 }
-.post-card img {
-    width: 100%;
-    height: 350px; /* Tinggi gambar cover diubah agar seperti poster */
-    object-fit: cover; /* Memastikan gambar mengisi area tanpa terdistorsi */
-    border-radius: 0; /* Tanpa rounded corners */
+/* Mengatur transisi untuk teks sidebar */
+.sidebar-text {
+    transition: opacity 0.3s ease;
 }
-.post-content {
-    padding: 1rem;
-    flex-grow: 1; /* Memastikan konten mengisi sisa ruang */
-    display: flex;
-    flex-direction: column;
-}
-.post-title {
-    font-weight: bold;
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-    line-height: 1.2;
-    text-align: center; /* Pusatkan judul */
-}
-.post-description {
-    font-size: 0.9rem;
-    color: #4a5568;
-    flex-grow: 1; /* Memastikan deskripsi mengisi ruang */
-}
-.post-meta {
-    font-size: 0.8rem;
-    color: #718096;
-    margin-top: 0.5rem;
+/* Menyembunyikan teks sidebar saat diciutkan */
+.sidebar-collapsed .sidebar-text {
+    opacity: 0;
+    pointer-events: none;
+    margin-left: 0 !important; /* Pastikan margin kiri dihilangkan saat teks tidak terlihat */
 }
 
-/* Styling untuk halaman baca volume */
-.volume-reader-layout {
-    display: flex; /* Menggunakan flexbox untuk panel kiri dan kanan */
-    max-width: 1200px; /* Lebar maksimum untuk seluruh layout pembaca */
-    margin: 0 auto;
-    padding: 1rem; /* Padding untuk keseluruhan layout */
-    align-items: flex-start; /* Align item ke atas */
+/* Perbaikan perataan ikon di header sidebar saat diciutkan */
+.sidebar-collapsed .sidebar-header-content {
+    justify-content: center; /* Pusatkan konten flex di dalam header */
+    gap: 0 !important; /* Hapus efek space-x-3 */
+    padding: 0 !important; /* Hapus padding horizontal dari header */
+}
+/* Menyesuaikan padding tombol toggle menu saat sidebar diciutkan */
+.sidebar-collapsed .sidebar-toggle-button {
+    padding: 16px !important; /* Sesuaikan padding agar ikon terpusat visual */
 }
 
-.toc-panel {
-    flex: 0 0 250px; /* Lebar tetap untuk panel daftar isi */
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    padding: 1.5rem;
-    margin-right: 1rem; /* Jarak antara panel daftar isi dan konten */
-    position: sticky; /* Agar daftar isi tetap terlihat saat scroll */
-    top: 1rem; /* Jarak dari atas */
-    height: fit-content; /* Tinggi sesuai konten */
-    max-height: calc(100vh - 2rem); /* Tinggi maksimum agar bisa di-scroll jika panjang */
-    overflow-y: auto; /* Aktifkan scroll jika konten daftar isi terlalu panjang */
-}
-.toc-panel h3 {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 0.5rem;
-}
-.toc-panel ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.toc-panel li {
-    margin-bottom: 0.5rem;
-}
-.toc-panel a {
-    display: block;
-    padding: 0.5rem;
-    color: #2a69ac; /* Warna link */
-    text-decoration: none;
-    transition: background-color 0.1s ease-in-out;
-    border: 1px solid transparent; /* Border transparan untuk konsistensi */
-}
-.toc-panel a:hover {
-    background-color: #f0f0f0;
-    border-color: #e2e8f0;
-}
-.toc-panel a.active-tab { /* Styling untuk tab aktif */
-    background-color: #e2e8f0;
-    font-weight: bold;
-    color: #1a202c;
+/* Perbaikan perataan ikon di item menu sidebar saat diciutkan */
+.sidebar-collapsed .sidebar-menu-item a {
+    display: flex; /* Jadikan tautan sebagai flex container */
+    justify-content: center; /* Pusatkan ikon secara horizontal */
+    align-items: center; /* Pusatkan ikon secara vertikal */
+    padding: 16px 0 !important; /* Sesuaikan padding vertikal, hapus horizontal */
+    width: 100%; /* Pastikan elemen mengambil lebar penuh dari li */
 }
 
-.content-panel {
-    flex-grow: 1; /* Konten utama akan mengambil sisa ruang */
-    max-width: 800px; /* Lebar maksimum untuk konten bacaan */
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    padding: 2rem;
-    line-height: 1.8;
-    font-size: 1.1rem;
-}
-.content-panel h2 {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 1.5rem;
-    text-align: center;
-}
-.content-panel h3 {
-    font-size: 1.75rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 0.5rem;
-}
-.content-panel p {
-    margin-bottom: 1rem;
-}
-.content-panel img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 1.5rem auto;
-    border: 1px solid #e2e8f0;
-}
-.content-panel .quote {
-    font-style: italic;
-    border-left: 4px solid #e2e8f0;
-    padding-left: 1rem;
-    margin: 1.5rem 0;
-    color: #4a5568;
-}
-.content-panel .dialog-box {
-    background-color: #f8f8f8;
-    border: 1px solid #e2e8f0;
-    padding: 1rem;
-    margin: 1.5rem 0;
-}
-.content-panel .dialog-box p {
-    margin-bottom: 0.5rem;
-}
-.content-panel .dialog-box p strong {
-    color: #2d3748;
-}
-
-/* Styling untuk konten bab individual (tab) */
-.chapter-content-section {
-    display: none; /* Sembunyikan semua bab secara default */
-}
-.chapter-content-section.active {
-    display: block; /* Tampilkan hanya bab yang aktif */
-}
-
-/* Overlay untuk menu hamburger */
-.toc-panel-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Warna gelap transparan */
-    z-index: 40; /* Di bawah header, di atas konten */
-    display: none; /* Sembunyikan secara default */
-}
-.toc-panel-overlay.active {
-    display: block; /* Tampilkan saat aktif */
-}
-
-
-/* Responsiveness for smaller screens */
-@media (max-width: 1023px) { /* Menggunakan max-width: 1023px untuk breakpoint lg:hidden */
-    .volume-reader-layout {
-        flex-direction: column; /* Stack panels vertically on small screens */
-        padding: 0.5rem;
+/* Responsif untuk tampilan mobile */
+@media (max-width: 768px) {
+    .sidebar-mobile-hidden {
+        transform: translateX(-100%);
     }
-    .toc-panel {
-        position: fixed; /* Ubah posisi menjadi fixed */
-        top: 0;
-        left: -260px; /* Sembunyikan di luar layar */
-        width: 250px; /* Lebar menu */
-        height: 100%; /* Tinggi penuh */
-        margin-right: 0;
-        margin-bottom: 0; /* Hapus margin bawah */
-        max-height: 100vh; /* Pastikan tinggi penuh viewport */
-        z-index: 50; /* Di atas overlay */
-        transition: left 0.3s ease-in-out; /* Animasi geser */
-        box-shadow: 2px 0 5px rgba(0,0,0,0.2); /* Tambah shadow */
-    }
-    .toc-panel.active {
-        left: 0; /* Tampilkan menu */
-    }
-    .content-panel {
-        width: 100%;
-        padding: 1rem;
+    .main-mobile-full {
+        margin-left: 0 !important;
     }
 }
