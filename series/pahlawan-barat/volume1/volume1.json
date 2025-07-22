@@ -1,0 +1,17 @@
+{
+  "judul_volume": "Awal Petualangan",
+  "penulis": "Raka",
+  "rilis": "2025-01-01",
+  "bab": [
+    {
+      "id": "bab1",
+      "judul": "Bangun di Tengah Malam",
+      "file": "bab1.json" 
+    },
+    {
+      "id": "bab2",
+      "judul": "Pertemuan Rahasia",
+      "file": "bab2.json"
+    }
+  ]
+}
