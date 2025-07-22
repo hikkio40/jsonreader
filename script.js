@@ -158,12 +158,25 @@ const uiService = {
     async renderHomepageContent(seriesIndex) {
         let seriesHtml = ``;
         seriesIndex.forEach(series => {
+            // Menentukan warna badge berdasarkan format
+            let badgeColorClass = '';
+            if (series.format === 'Light Novel') {
+                badgeColorClass = 'bg-blue-500';
+            } else if (series.format === 'Manga') {
+                badgeColorClass = 'bg-green-500';
+            } else if (series.format === 'Web Novel') {
+                badgeColorClass = 'bg-purple-500';
+            } else {
+                badgeColorClass = 'bg-gray-500'; // Default jika format tidak dikenal
+            }
+
             seriesHtml += `
                 <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.showSeriesDetail('${series.id}')">
-                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden series-cover-placeholder">
+                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
                         ${series.cover ? `<img src="${series.cover}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
+                        ${series.format ? `<span class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white rounded-full ${badgeColorClass}">${series.format}</span>` : ''}
                     </div>
                     <h3 class="text-sm font-medium line-clamp-2 series-title">${series.judul}</h3>
                 </article>
