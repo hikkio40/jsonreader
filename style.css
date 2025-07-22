@@ -53,3 +53,14 @@
         margin-left: 0 !important;
     }
 }
+
+/* Menambahkan transisi untuk konten dinamis */
+.dynamic-content-area {
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out; /* Transisi untuk efek fade */
+}
+
+/* Kelas untuk menyembunyikan konten sementara sebelum memuat yang baru */
+.dynamic-content-area.fade-out {
+    opacity: 0;
+}
