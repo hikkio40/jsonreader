@@ -80,11 +80,10 @@ const dataService = {
 
 const uiService = {
     async renderContentWithTransition(contentHtml) {
-        DOMElements.dynamicContent.classList.add('fade-out'); // Mulai fade-out
-        // Tunggu sedikit lebih lama dari durasi transisi CSS (0.3s)
-        await new Promise(resolve => setTimeout(resolve, 350)); // Diperpanjang menjadi 350ms
-        DOMElements.dynamicContent.innerHTML = contentHtml; // Ganti konten
-        DOMElements.dynamicContent.classList.remove('fade-out'); // Mulai fade-in
+        DOMElements.dynamicContent.classList.add('fade-out');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        DOMElements.dynamicContent.innerHTML = contentHtml;
+        DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
     createTocSidebar(chapters) {
@@ -417,8 +416,8 @@ const app = {
         if (appState.isMobile) {
             // Mobile: Konten utama penuh
             DOMElements.mainContent.classList.add('main-mobile-full');
-            DOMElements.mainContent.classList.remove('ml-desktop-toc-open'); // Hapus kelas desktop
-            DOMElements.mainAppHeader.classList.remove('header-desktop-toc-open'); // Hapus kelas desktop
+            DOMElements.mainContent.style.marginLeft = '0'; // Pastikan margin kiri 0 di mobile
+            DOMElements.mainAppHeader.style.left = '0'; // Header selalu di kiri di mobile
             
             // Atur visibilitas tombol toggle di header utama
             DOMElements.sidebarToggle.style.display = 'block';
@@ -447,13 +446,13 @@ const app = {
             if (DOMElements.tocSidebar) {
                 // Jika sidebar TOC ada, pastikan terlihat dan sesuaikan margin konten utama
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-                DOMElements.mainContent.classList.add('ml-desktop-toc-open'); // Tambahkan kelas desktop
-                DOMElements.mainAppHeader.classList.add('header-desktop-toc-open'); // Tambahkan kelas desktop
+                DOMElements.mainContent.style.marginLeft = '256px'; // Lebar sidebar TOC
+                DOMElements.mainAppHeader.style.left = '256px'; // Header utama bergeser
                 document.body.classList.add('toc-active'); // Tambahkan kelas ke body untuk CSS
             } else {
                 // Jika tidak ada sidebar TOC, konten utama penuh
-                DOMElements.mainContent.classList.remove('ml-desktop-toc-open'); // Hapus kelas desktop
-                DOMElements.mainAppHeader.classList.remove('header-desktop-toc-open'); // Hapus kelas desktop
+                DOMElements.mainContent.style.marginLeft = '0';
+                DOMElements.mainAppHeader.style.left = '0'; // Header utama di kiri
                 document.body.classList.remove('toc-active'); // Hapus kelas dari body
             }
         }
