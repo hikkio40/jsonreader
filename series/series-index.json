@@ -1,10 +1,16 @@
 [
   {
+    "id": "Doratama",
+    "judul": "Reincarnated as a Dragon Hatchling",
+    "cover": "doratamav1.jpg",
+    "kategori": "Fantasi",
+    "jumlah_volume": 1,
+  },
+  {
     "id": "pahlawan-barat",
     "judul": "Pahlawan Barat",
     "cover": "pahlawan-barat/scene-desa.jpg",
     "kategori": "Fantasi",
     "jumlah_volume": 2,
-    "deskripsi": "Sebuah seri fantasi epik tentang petualangan Raka di dunia barat yang penuh misteri dan bahaya."
   }
 ]
