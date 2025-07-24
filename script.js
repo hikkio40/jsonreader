@@ -61,14 +61,25 @@ const dataService = {
         try {
             const response = await fetch(path);
             if (!response.ok) {
-                throw new Error(`Failed to load ${path}: ${response.statusText}`);
+                // If response is not OK (e.g., 404 Not Found, 500 Internal Server Error)
+                throw new Error(`Gagal memuat ${path}: ${response.status} ${response.statusText}`);
             }
+
+            // Check if the content type is JSON before parsing
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text(); // Read response as text to see the content
+                console.error(`Expected JSON for ${path}, but received content type: ${contentType}. Content:`, text);
+                throw new Error(`Tipe konten tidak valid untuk ${path}. Diharapkan JSON.`);
+            }
+
             const data = await response.json();
             this.setCache(cacheKey, data);
             return data;
         } catch (error) {
             console.error('Error fetching JSON:', error);
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            // Display a more specific error message to the user
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat konten. Pastikan file data tersedia di lokasi yang benar. Detail error: ${error.message}</div>`;
             return null;
         }
     },
