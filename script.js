@@ -198,7 +198,7 @@ const uiService = {
                 ${seriesHtml}
             </div>
         `;
-        uiService.renderContentWithTransition(contentHtml);
+        await uiService.renderContentWithTransition(contentHtml); // Ensure this is awaited
     },
 
     async renderSeriesDetailContent(info, volumes) {
@@ -263,7 +263,7 @@ const uiService = {
                 </div>
             </div>
         `;
-        uiService.renderContentWithTransition(contentHtml);
+        await uiService.renderContentWithTransition(contentHtml); // Ensure this is awaited
     },
 
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
@@ -316,7 +316,7 @@ const uiService = {
                 </div>
             </div>
         `;
-        uiService.renderContentWithTransition(contentHtml);
+        await uiService.renderContentWithTransition(contentHtml); // Ensure this is awaited
     }
 };
 
@@ -399,6 +399,8 @@ const navigationService = {
                         appState.currentVolumeData = volumeData;
                     } else {
                         console.error("Failed to load volume data for chapter navigation.");
+                        // Attempt to navigate to series detail if volume data is missing
+                        await navigationService.showSeriesDetail(appState.currentSeriesId);
                         return;
                     }
                 }
@@ -423,7 +425,7 @@ const navigationService = {
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
 
-        uiService.renderHomepageContent(seriesIndex);
+        await uiService.renderHomepageContent(seriesIndex); // PENTING: Pastikan ini diawait
         // Update URL after rendering content
         navigationService.updateUrlAndHistory('home');
     },
@@ -442,7 +444,7 @@ const navigationService = {
 
         if (!info || !volumes) return;
 
-        uiService.renderSeriesDetailContent(info, volumes);
+        await uiService.renderSeriesDetailContent(info, volumes); // PENTING: Pastikan ini diawait
         // Update URL after rendering content
         navigationService.updateUrlAndHistory('series-detail', seriesId);
     },
@@ -454,7 +456,11 @@ const navigationService = {
         appState.currentChapterIndex = 0;
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
-        if (!volumeData) return;
+        if (!volumeData) {
+            // Jika data volume tidak ditemukan, kembali ke detail seri
+            await navigationService.showSeriesDetail(seriesId);
+            return;
+        }
 
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
@@ -469,8 +475,8 @@ const navigationService = {
             app.toggleTocSidebar(false);
         }
 
-        navigationService.showChapter(seriesId, volumeId, 0);
-        // Update URL after rendering content (showChapter will update it, so no need here)
+        // Panggil showChapter, yang akan merender konten dan memperbarui URL
+        await navigationService.showChapter(seriesId, volumeId, 0);
     },
 
     async showChapter(seriesId, volumeId, chapterIndex) {
@@ -496,9 +502,13 @@ const navigationService = {
         app.applyLayoutClasses(); // Sesuaikan layout untuk tampilan bab
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
-        if (!chapterData) return;
+        if (!chapterData) {
+            // Jika data bab tidak ditemukan, kembali ke detail volume (atau seri jika volume juga gagal)
+            await navigationService.showVolume(seriesId, volumeId); // Coba kembali ke volume
+            return;
+        }
 
-        uiService.renderContentWithTransition(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
+        await uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length); // PENTING: Pastikan ini diawait
         // Update URL after rendering content
         navigationService.updateUrlAndHistory('chapter-read', seriesId, volumeId, chapterIndex);
 
