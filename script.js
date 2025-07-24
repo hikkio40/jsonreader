@@ -61,22 +61,15 @@ const dataService = {
         try {
             const response = await fetch(path);
             if (!response.ok) {
-                throw new Error(`Gagal memuat ${path}: ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to load ${path}: ${response.statusText}`);
             }
-
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await response.text();
-                console.error(`Expected JSON for ${path}, but received content type: ${contentType}. Content:`, text);
-                throw new Error(`Tipe konten tidak valid untuk ${path}. Diharapkan JSON.`);
-            }
-
-            const data = await response.json();
+            const data = await response.json(); // Mengembalikan ke logika kode lama
             this.setCache(cacheKey, data);
             return data;
         } catch (error) {
             console.error('Error fetching JSON:', error);
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat konten dari <strong>${path}</strong>. Pastikan file data tersedia di lokasi yang benar. Detail error: ${error.message}</div>`;
+            // Mengembalikan pesan error ke versi kode lama
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
             return null;
         }
     },
@@ -192,7 +185,7 @@ const uiService = {
                 ${seriesHtml}
             </div>
         `;
-        await uiService.renderContentWithTransition(contentHtml); // Menambahkan 'await'
+        await uiService.renderContentWithTransition(contentHtml);
     },
 
     async renderSeriesDetailContent(info, volumes) {
@@ -257,7 +250,7 @@ const uiService = {
                 </div>
             </div>
         `;
-        await uiService.renderContentWithTransition(contentHtml); // Menambahkan 'await'
+        await uiService.renderContentWithTransition(contentHtml);
     },
 
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
@@ -310,7 +303,7 @@ const uiService = {
                 </div>
             </div>
         `;
-        await uiService.renderContentWithTransition(contentHtml); // Menambahkan 'await'
+        await uiService.renderContentWithTransition(contentHtml);
     }
 };
 
@@ -419,7 +412,7 @@ const navigationService = {
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
 
-        await uiService.renderHomepageContent(seriesIndex); // PENTING: Pastikan ini diawait
+        await uiService.renderHomepageContent(seriesIndex);
         // Update URL after rendering content
         navigationService.updateUrlAndHistory('home');
     },
@@ -438,7 +431,7 @@ const navigationService = {
 
         if (!info || !volumes) return;
 
-        await uiService.renderSeriesDetailContent(info, volumes); // PENTING: Pastikan ini diawait
+        await uiService.renderSeriesDetailContent(info, volumes);
         // Update URL after rendering content
         navigationService.updateUrlAndHistory('series-detail', seriesId);
     },
@@ -502,7 +495,7 @@ const navigationService = {
             return;
         }
 
-        await uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length); // PENTING: Pastikan ini diawait
+        await uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
         // Update URL after rendering content
         navigationService.updateUrlAndHistory('chapter-read', seriesId, volumeId, chapterIndex);
 
