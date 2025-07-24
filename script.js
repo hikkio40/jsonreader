@@ -1,230 +1,519 @@
-// script.js
-
-const appState = {
-  seriesList: [],
-  currentSeries: null,
-  currentVolume: null,
-  currentChapter: null
+const DOMElements = {
+    sidebarToggle: document.getElementById('sidebarToggle'),
+    mainAppHeader: document.getElementById('mainAppHeader'),
+    mainTitle: document.getElementById('mainTitle'),
+    mainContent: document.getElementById('mainContent'),
+    dynamicContent: document.getElementById('dynamicContent'),
+    overlay: document.getElementById('overlay'),
+    tocSidebar: null, // Reference to the dynamically created TOC sidebar
 };
 
-const mainContent = document.getElementById("dynamicContent");
-const tocSidebarId = "tocSidebar";
-const overlay = document.getElementById("overlay");
+const appState = {
+    isMobile: false,
+    isTocSidebarOpen: false, // Tracks if TOC sidebar is open (mainly for mobile)
+    currentView: 'home', // 'home', 'series-detail', 'volume-read'
+    currentSeriesId: null,
+    currentVolumeId: null,
+    currentChapterIndex: 0,
+    currentVolumeChapters: [],
+    currentVolumeData: null,
+};
 
-// Utilitas
-function fetchJson(url) {
-  return fetch(url).then((res) => {
-    if (!res.ok) throw new Error("HTTP error " + res.status);
-    return res.json();
-  });
-}
-
-function setTitle(text) {
-  const title = document.getElementById("mainTitle");
-  if (title) title.textContent = text;
-  document.title = text + " - Json Library";
-}
-
-function clearMainContent() {
-  mainContent.innerHTML = "";
-}
-
-function showLoading() {
-  mainContent.innerHTML = `<div class="text-center py-10 text-gray-500">Memuat...</div>`;
-}
-
-function createTOCSidebar(items, onClickItem) {
-  removeTOCSidebar();
-
-  const sidebar = document.createElement("aside");
-  sidebar.id = tocSidebarId;
-  sidebar.classList.add("toc-sidebar-hidden");
-
-  sidebar.innerHTML = `
-    <div class="toc-header">
-      <span class="font-semibold">Daftar Isi</span>
-      <button id="tocCloseBtn" class="material-icons">close</button>
-    </div>
-    <nav class="toc-nav">
-      ${items
-        .map(
-          (item, index) => `
-        <div class="toc-menu-item">
-          <a href="#" data-index="${index}" class="block">${item.title || "Bab " + (index + 1)}</a>
-        </div>`
-        )
-        .join("")}
-    </nav>
-  `;
-
-  document.body.appendChild(sidebar);
-
-  const links = sidebar.querySelectorAll("a[data-index]");
-  links.forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const index = parseInt(link.dataset.index);
-      if (!isNaN(index)) onClickItem(index);
-      hideSidebar();
-    });
-  });
-
-  document.getElementById("tocCloseBtn").onclick = hideSidebar;
-}
-
-function removeTOCSidebar() {
-  const existing = document.getElementById(tocSidebarId);
-  if (existing) existing.remove();
-}
-
-function showSidebar() {
-  const sidebar = document.getElementById(tocSidebarId);
-  if (sidebar) {
-    sidebar.classList.remove("toc-sidebar-hidden");
-    overlay.classList.remove("hidden");
-    document.body.classList.add("toc-active");
-  }
-}
-
-function hideSidebar() {
-  const sidebar = document.getElementById(tocSidebarId);
-  if (sidebar) {
-    sidebar.classList.add("toc-sidebar-hidden");
-    overlay.classList.add("hidden");
-    document.body.classList.remove("toc-active");
-  }
-}
-
-// Rendering
-function renderSeriesList(seriesList) {
-  setTitle("Daftar Seri");
-  clearMainContent();
-
-  const wrapper = document.createElement("div");
-  wrapper.className = "grid grid-cols-2 md:grid-cols-4 gap-4";
-
-  seriesList.forEach((series) => {
-    const div = document.createElement("div");
-    div.className = "border p-2 rounded shadow hover:shadow-md cursor-pointer";
-    div.innerHTML = `
-      <img src="${series.cover}" alt="${series.title}" class="w-full h-48 object-cover rounded">
-      <h2 class="font-semibold mt-2 line-clamp-2">${series.title}</h2>
-    `;
-    div.onclick = () => {
-      history.pushState({}, "", `/series/${series.id}`);
-      handleRouting(location.pathname);
+const debounce = (func, delay) => {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
     };
-    wrapper.appendChild(div);
-  });
+};
 
-  mainContent.appendChild(wrapper);
-}
+const dataService = {
+    CACHE_PREFIX: 'app_data_cache_',
 
-function renderVolumeList(seriesInfo, volumeList) {
-  setTitle(seriesInfo.title);
-  clearMainContent();
-
-  const wrapper = document.createElement("div");
-  wrapper.className = "grid grid-cols-2 md:grid-cols-4 gap-4";
-
-  volumeList.forEach((volume, index) => {
-    const div = document.createElement("div");
-    div.className = "border p-2 rounded shadow hover:shadow-md cursor-pointer";
-    div.innerHTML = `
-      <img src="${volume.cover}" alt="Volume ${index + 1}" class="w-full h-48 object-cover rounded">
-      <h2 class="font-semibold mt-2">Volume ${index + 1}</h2>
-    `;
-    div.onclick = () => {
-      history.pushState({}, "", `/series/${seriesInfo.id}/volume${index + 1}`);
-      handleRouting(location.pathname);
-    };
-    wrapper.appendChild(div);
-  });
-
-  mainContent.appendChild(wrapper);
-}
-
-function renderChapter(seriesId, volumeId, chapterData) {
-  setTitle(chapterData.title || "Bab");
-  clearMainContent();
-
-  const container = document.createElement("div");
-  container.className = "space-y-4";
-
-  if (chapterData.images) {
-    chapterData.images.forEach((img) => {
-      const image = document.createElement("img");
-      image.src = `/images/${seriesId}/${volumeId}/${img}`;
-      image.className = "w-full rounded";
-      container.appendChild(image);
-    });
-  } else {
-    container.innerHTML = `<p class="text-gray-500">Tidak ada gambar untuk bab ini.</p>`;
-  }
-
-  mainContent.appendChild(container);
-}
-
-// Routing SPA
-function handleRouting(path) {
-  showLoading();
-  const parts = path.split("/").filter(Boolean);
-
-  if (parts.length === 0) {
-    // Home
-    fetchJson("/series/series-index.json")
-      .then((data) => {
-        appState.seriesList = data;
-        renderSeriesList(data);
-      })
-      .catch((err) => console.error("Gagal memuat daftar seri:", err));
-  } else if (parts.length === 2 && parts[0] === "series") {
-    // Series view
-    const seriesId = parts[1];
-    Promise.all([
-      fetchJson(`/series/${seriesId}/info.json`),
-      fetchJson(`/series/${seriesId}/volumes.json`)
-    ])
-      .then(([info, volumes]) => {
-        appState.currentSeries = info;
-        renderVolumeList(info, volumes);
-      })
-      .catch((err) => console.error("Gagal memuat seri:", err));
-  } else if (parts.length === 4 && parts[0] === "series") {
-    const [_, seriesId, volumeDir, chapterIndexStr] = parts;
-    const volumeId = volumeDir;
-    const chapterIndex = parseInt(chapterIndexStr);
-    const volumePath = `/series/${seriesId}/${volumeId}`;
-
-    fetchJson(`${volumePath}/volume1.json`) // asumsi volume.json = volume1.json
-      .then((volumeData) => {
-        const chapterList = volumeData.chapters;
-        if (!chapterList || !chapterList[chapterIndex]) {
-          throw new Error("Bab tidak ditemukan");
+    getCache(key) {
+        try {
+            const cachedData = localStorage.getItem(this.CACHE_PREFIX + key);
+            return cachedData ? JSON.parse(cachedData) : null;
+        } catch (e) {
+            console.error('Error reading from cache:', e);
+            localStorage.removeItem(this.CACHE_PREFIX + key);
+            return null;
         }
-        createTOCSidebar(chapterList, (i) => {
-          history.pushState({}, "", `/series/${seriesId}/${volumeId}/${i}`);
-          handleRouting(location.pathname);
+    },
+
+    setCache(key, data) {
+        try {
+            localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(data));
+        } catch (e) {
+            console.error('Error writing to cache:', e);
+        }
+    },
+
+    async fetchJson(path) {
+        const cacheKey = path;
+
+        const cachedData = this.getCache(cacheKey);
+        if (cachedData) {
+            return cachedData;
+        }
+
+        try {
+            const response = await fetch(path);
+            if (!response.ok) {
+                throw new Error(`Failed to load ${path}: ${response.statusText}`);
+            }
+            const data = await response.json();
+            this.setCache(cacheKey, data);
+            return data;
+        } catch (error) {
+            console.error('Error fetching JSON:', error);
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            return null;
+        }
+    },
+
+    getChapterImagePath(seriesId, volumeId, imageName) {
+        return `images/${seriesId}/${volumeId}/${imageName}`;
+    }
+};
+
+const uiService = {
+    async renderContentWithTransition(contentHtml) {
+        DOMElements.dynamicContent.classList.add('fade-out');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        DOMElements.dynamicContent.innerHTML = contentHtml;
+        DOMElements.dynamicContent.classList.remove('fade-out');
+    },
+
+    createTocSidebar(chapters) {
+        if (DOMElements.tocSidebar) {
+            DOMElements.tocSidebar.remove(); // Remove existing if any
+            DOMElements.tocSidebar = null;
+        }
+
+        const tocSidebarElement = document.createElement('aside');
+        tocSidebarElement.id = 'tocSidebar';
+        tocSidebarElement.classList.add('app-sidebar'); // Use a common class for styling
+
+        let chaptersHtml = ``;
+        chapters.forEach((chapter, index) => {
+            const isActive = index === appState.currentChapterIndex ? 'active' : '';
+            chaptersHtml += `
+                <li class="toc-menu-item">
+                    <a href="#" onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); return false;" class="flex items-center ${isActive}">
+                        <span class="material-icons text-xl flex-shrink-0 mr-2">menu_book</span>
+                        <span class="text-sm">${chapter.judul}</span>
+                    </a>
+                </li>
+            `;
         });
-        renderChapter(seriesId, volumeId, chapterList[chapterIndex]);
-      })
-      .catch((err) => {
-        console.error("Gagal memuat volume:", err);
-        mainContent.innerHTML = `<div class="text-red-500">Gagal memuat konten.</div>`;
-      });
-  } else {
-    mainContent.innerHTML = `<div class="text-gray-500">Halaman tidak ditemukan.</div>`;
-  }
-}
 
-// Init
-window.addEventListener("popstate", () => {
-  handleRouting(location.pathname);
-});
+        tocSidebarElement.innerHTML = `
+            <header class="toc-header">
+                <h2 class="text-xl font-semibold">Daftar Isi Volume</h2>
+                <button id="closeTocSidebar" class="p-2 hover:bg-gray-100 rounded md:hidden">
+                    <span class="material-icons text-xl">close</span>
+                </button>
+            </header>
+            <nav class="toc-nav">
+                <ul class="space-y-2">
+                    <li class="toc-menu-item">
+                        <a href="#" onclick="navigationService.showSeriesDetail('${appState.currentSeriesId}'); return false;" class="flex items-center">
+                            <span class="material-icons mr-2">arrow_back</span>
+                            Kembali ke Seri
+                        </a>
+                    </li>
+                    <li class="border-t border-gray-200 my-2"></li>
+                    ${chaptersHtml}
+                </ul>
+            </nav>
+        `;
 
-document.getElementById("sidebarToggle").onclick = showSidebar;
-overlay.onclick = hideSidebar;
+        document.body.appendChild(tocSidebarElement);
+        DOMElements.tocSidebar = tocSidebarElement;
 
-document.addEventListener("DOMContentLoaded", () => {
-  handleRouting(location.pathname);
-});
+        // Attach event listener for close button
+        const closeButton = document.getElementById('closeTocSidebar');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => app.toggleTocSidebar(false));
+        }
+
+        // Ensure it's hidden on mobile initially if not explicitly opened
+        if (appState.isMobile) {
+            DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+        }
+    },
+
+    removeTocSidebar() {
+        if (DOMElements.tocSidebar) {
+            DOMElements.tocSidebar.remove();
+            DOMElements.tocSidebar = null;
+            appState.isTocSidebarOpen = false; // Reset state
+        }
+    },
+
+    async renderHomepageContent(seriesIndex) {
+        let seriesHtml = ``;
+        seriesIndex.forEach(series => {
+            let badgeColorClass = '';
+            if (series.format === 'Light Novel') {
+                badgeColorClass = 'bg-blue-500';
+            } else if (series.format === 'Manga') {
+                badgeColorClass = 'bg-green-500';
+            } else if (series.format === 'Web Novel') {
+                badgeColorClass = 'bg-purple-500';
+            } else {
+                badgeColorClass = 'bg-gray-500';
+            }
+
+            seriesHtml += `
+                <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.showSeriesDetail('${series.id}')">
+                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
+                        ${series.cover ? `<img src="${series.cover}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>`}
+                        ${series.format ? `<span class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white rounded-full ${badgeColorClass}">${series.format}</span>` : ''}
+                    </div>
+                    <h3 class="text-sm font-medium line-clamp-2 series-title">${series.judul}</h3>
+                </article>
+            `;
+        });
+
+        const contentHtml = `
+            <h2 class="text-2xl font-semibold mb-8 page-title">Light Novel Terbaru</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 series-grid">
+                ${seriesHtml}
+            </div>
+        `;
+        uiService.renderContentWithTransition(contentHtml);
+    },
+
+    async renderSeriesDetailContent(info, volumes) {
+        let volumesHtml = '';
+        volumes.forEach(volume => {
+            volumesHtml += `
+                <div class="cursor-pointer hover:opacity-80 transition-opacity volume-card" onclick="navigationService.showVolume('${appState.currentSeriesId}', '${volume.id}')">
+                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 flex items-center justify-center overflow-hidden volume-cover-placeholder">
+                        ${volume.cover ? `<img src="${volume.cover}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image" loading="lazy">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>`}
+                    </div>
+                    <h4 class="text-xs font-medium text-center volume-title">${volume.judul}</h4>
+                </div>
+            `;
+        });
+
+        const contentHtml = `
+            <div class="mb-6">
+                <button onclick="navigationService.renderHomepage()" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-homepage-button">
+                    <span class="material-icons mr-2">arrow_back</span>
+                    Kembali ke Beranda
+                </button>
+            </div>
+            <div class="series-detail-container">
+                <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
+                    <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
+                        <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
+                            ${info.cover ? `<img src="${info.cover}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>`}
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 series-info-section">
+                        <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
+                        <div class="flex items-center gap-6 text-gray-600 mb-4 series-metadata">
+                            <div class="flex items-center series-author">
+                                <span class="material-icons text-sm mr-1 align-middle">person</span>
+                                ${info.penulis}
+                            </div>
+                            <div class="flex items-center series-release-date">
+                                <span class="material-icons text-sm mr-1 align-middle">calendar_today</span>
+                                ${info.rilis}
+                            </div>
+                            <div class="flex items-center series-genre">
+                                <span class="material-icons text-sm mr-1">label</span>
+                                ${info.genre}
+                            </div>
+                            <div class="flex items-center series-status">
+                                <span class="material-icons text-sm mr-1">info</span>
+                                ${info.status}
+                            </div>
+                        </div>
+                        
+                        <div class="series-synopsis">
+                            <h3 class="text-xl font-semibold mb-3">Sinopsis</h3>
+                            <p class="mb-4">${info.deskripsi}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="prose max-w-none series-volumes-section">
+                    <h3 class="text-xl font-semibold mb-3">Volume Terkait</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 volumes-grid">
+                        ${volumesHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+        uiService.renderContentWithTransition(contentHtml);
+    },
+
+    async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
+        let chapterContentHtml = '';
+        chapterData.konten.forEach(item => {
+            if (item.paragraf) {
+                chapterContentHtml += `<p class="mb-4 chapter-paragraph">${item.paragraf}</p>`;
+            } else if (item.gambar) {
+                chapterContentHtml += `
+                    <div class="my-6 text-center chapter-image-wrapper">
+                        <img src="${dataService.getChapterImagePath(appState.currentSeriesId, appState.currentVolumeId, item.gambar)}" alt="Gambar ilustrasi" class="max-w-full h-auto mx-auto rounded-lg shadow-md chapter-image" loading="lazy">
+                    </div>
+                `;
+            } else if (item.kutipan) {
+                chapterContentHtml += `
+                    <blockquote class="border-l-4 border-gray-300 pl-4 py-2 my-4 italic text-gray-700 chapter-quote">
+                        "${item.kutipan}"
+                    </blockquote>
+                `;
+            } else if (item.dialog) {
+                let dialogHtml = '';
+                item.dialog.forEach(d => {
+                    dialogHtml += `<p class="mb-2 chapter-dialog-line"><strong class="text-blue-700 chapter-dialog-character">${d.karakter}:</strong> <span class="chapter-dialog-speech">${d.ucapan}</span></p>`;
+                });
+                chapterContentHtml += `<div class="bg-gray-50 p-4 rounded-lg my-4 chapter-dialog-block">${dialogHtml}</div>`;
+            }
+        });
+        
+        const prevButton = chapterIndex > 0 ? 
+            `<button onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex - 1})" class="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded chapter-nav-button chapter-nav-prev">
+                <span class="material-icons mr-2">arrow_back</span>
+                Bab Sebelumnya
+            </button>` : '';
+        
+        const nextButton = chapterIndex < totalChapters - 1 ? 
+            `<button onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex + 1})" class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded chapter-nav-button chapter-nav-next">
+                Bab Selanjutnya
+                <span class="material-icons ml-2">arrow_forward</span>
+            </button>` : '';
+        
+        const contentHtml = `
+            <div class="chapter-navigation-top">
+                <button onclick="navigationService.showVolume('${appState.currentSeriesId}', '${appState.currentVolumeId}')" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-volume-button">
+                    <span class="material-icons mr-2">arrow_back</span>
+                    Kembali ke Volume
+                </button>
+            </div>
+            
+            <div class="chapter-content-wrapper">
+                <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
+                ${chapterContentHtml}
+                
+                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
+                    <div>${prevButton}</div>
+                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
+                    <div>${nextButton}</div>
+                </div>
+            </div>
+        `;
+        uiService.renderContentWithTransition(contentHtml);
+    }
+};
+
+const navigationService = {
+    async renderHomepage() {
+        appState.currentView = 'home';
+        appState.currentSeriesId = null;
+        appState.currentVolumeId = null;
+        appState.currentChapterIndex = 0;
+
+        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
+        app.applyLayoutClasses(); // Sesuaikan layout untuk homepage
+
+        const seriesIndex = await dataService.fetchJson('series/series-index.json');
+        if (!seriesIndex) return;
+
+        uiService.renderHomepageContent(seriesIndex);
+    },
+
+    async showSeriesDetail(seriesId) {
+        appState.currentView = 'series-detail';
+        appState.currentSeriesId = seriesId;
+        appState.currentVolumeId = null;
+        appState.currentChapterIndex = 0;
+
+        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
+        app.applyLayoutClasses(); // Sesuaikan layout untuk detail seri
+
+        const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
+        const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
+
+        if (!info || !volumes) return;
+
+        uiService.renderSeriesDetailContent(info, volumes);
+    },
+
+    async showVolume(seriesId, volumeId) {
+        appState.currentView = 'volume-read';
+        appState.currentSeriesId = seriesId;
+        appState.currentVolumeId = volumeId;
+        appState.currentChapterIndex = 0;
+
+        const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
+        if (!volumeData) return;
+
+        appState.currentVolumeChapters = volumeData.bab;
+        appState.currentVolumeData = volumeData;
+
+        uiService.createTocSidebar(volumeData.bab); // Buat dan isi TOC sidebar
+
+        // Hanya toggle sidebar terbuka jika di desktop
+        if (!appState.isMobile) {
+            app.toggleTocSidebar(true);
+        } else {
+            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
+            app.toggleTocSidebar(false);
+        }
+
+        navigationService.showChapter(seriesId, volumeId, 0);
+    },
+
+    async showChapter(seriesId, volumeId, chapterIndex) {
+        appState.currentChapterIndex = chapterIndex;
+        const chapterInfo = appState.currentVolumeChapters[chapterIndex];
+        const volumeData = appState.currentVolumeData;
+
+        if (!chapterInfo || !volumeData) {
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab atau data volume tidak ditemukan.</div>`;
+            return;
+        }
+
+        uiService.createTocSidebar(appState.currentVolumeChapters); // Buat/perbarui TOC sidebar dengan bab aktif
+
+        // Hanya toggle sidebar terbuka jika di desktop
+        if (!appState.isMobile) {
+            app.toggleTocSidebar(true);
+        } else {
+            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
+            app.toggleTocSidebar(false);
+        }
+
+        app.applyLayoutClasses(); // Sesuaikan layout untuk tampilan bab
+
+        const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
+        if (!chapterData) return;
+
+        uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
+
+        // Scroll to top after rendering chapter content
+        DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};
+
+const app = {
+    applyLayoutClasses() {
+        if (appState.isMobile) {
+            // Mobile: Konten utama penuh
+            DOMElements.mainContent.classList.add('main-mobile-full');
+            DOMElements.mainContent.style.marginLeft = '0'; // Pastikan margin kiri 0 di mobile
+            DOMElements.mainAppHeader.style.left = '0'; // Header selalu di kiri di mobile
+            
+            // Atur visibilitas tombol toggle di header utama
+            DOMElements.sidebarToggle.style.display = 'block';
+
+            // Atur sidebar TOC (jika ada)
+            if (DOMElements.tocSidebar) {
+                if (appState.isTocSidebarOpen) {
+                    DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+                    DOMElements.overlay.classList.remove('hidden');
+                } else {
+                    DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+                    DOMElements.overlay.classList.add('hidden');
+                }
+            } else {
+                DOMElements.overlay.classList.add('hidden'); // Sembunyikan overlay jika tidak ada sidebar TOC
+            }
+
+        } else {
+            // Desktop: Konten utama menyesuaikan dengan sidebar TOC (jika ada)
+            DOMElements.mainContent.classList.remove('main-mobile-full');
+            DOMElements.overlay.classList.add('hidden'); // Overlay selalu tersembunyi di desktop
+
+            // Sembunyikan tombol toggle di desktop
+            DOMElements.sidebarToggle.style.display = 'none';
+
+            if (DOMElements.tocSidebar) {
+                // Jika sidebar TOC ada, pastikan terlihat dan sesuaikan margin konten utama
+                DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+                DOMElements.mainContent.style.marginLeft = '256px'; // Lebar sidebar TOC
+                DOMElements.mainAppHeader.style.left = '256px'; // Header utama bergeser
+                document.body.classList.add('toc-active'); // Tambahkan kelas ke body untuk CSS
+            } else {
+                // Jika tidak ada sidebar TOC, konten utama penuh
+                DOMElements.mainContent.style.marginLeft = '0';
+                DOMElements.mainAppHeader.style.left = '0'; // Header utama di kiri
+                document.body.classList.remove('toc-active'); // Hapus kelas dari body
+            }
+        }
+    },
+
+    checkMobile() {
+        const wasMobile = appState.isMobile;
+        appState.isMobile = window.innerWidth < 768;
+
+        if (wasMobile !== appState.isMobile) {
+            app.applyLayoutClasses();
+        }
+    },
+
+    // Fungsi untuk mengelola pembukaan/penutupan sidebar TOC
+    toggleTocSidebar(forceState = null) {
+        // Hanya beroperasi jika sidebar TOC sudah ada
+        if (!DOMElements.tocSidebar) return;
+
+        const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
+        appState.isTocSidebarOpen = newState;
+
+        if (appState.isMobile) {
+            if (newState) {
+                DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+                DOMElements.overlay.classList.remove('hidden');
+            } else {
+                DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+                DOMElements.overlay.classList.add('hidden');
+            }
+        } else {
+            // Di desktop, sidebar TOC selalu terlihat jika ada
+            DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+            DOMElements.overlay.classList.add('hidden');
+        }
+    },
+
+    setupEventListeners() {
+        DOMElements.sidebarToggle.addEventListener('click', () => app.toggleTocSidebar());
+
+        DOMElements.overlay.addEventListener('click', function() {
+            if (appState.isMobile) {
+                app.toggleTocSidebar(false); // Tutup sidebar TOC saat overlay diklik di mobile
+            }
+        });
+
+        window.addEventListener('resize', debounce(app.checkMobile, 200));
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (appState.isMobile && appState.isTocSidebarOpen) {
+                    app.toggleTocSidebar(false);
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            app.checkMobile();
+            navigationService.renderHomepage();
+        });
+    }
+};
+
+app.setupEventListeners();
