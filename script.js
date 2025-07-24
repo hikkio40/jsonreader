@@ -192,7 +192,7 @@ const uiService = {
                 ${seriesHtml}
             </div>
         `;
-        uiService.renderContentWithTransition(contentHtml); // Dihapus 'await' agar sesuai kode lama
+        await uiService.renderContentWithTransition(contentHtml); // Menambahkan 'await'
     },
 
     async renderSeriesDetailContent(info, volumes) {
@@ -257,7 +257,7 @@ const uiService = {
                 </div>
             </div>
         `;
-        uiService.renderContentWithTransition(contentHtml); // Dihapus 'await' agar sesuai kode lama
+        await uiService.renderContentWithTransition(contentHtml); // Menambahkan 'await'
     },
 
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
@@ -310,13 +310,102 @@ const uiService = {
                 </div>
             </div>
         `;
-        uiService.renderContentWithTransition(contentHtml); // Dihapus 'await' agar sesuai kode lama
+        await uiService.renderContentWithTransition(contentHtml); // Menambahkan 'await'
     }
 };
 
 const navigationService = {
-    // Menghapus fungsi updateUrlAndHistory
-    // Menghapus fungsi handleNavigation
+    // Helper function to update URL and history
+    updateUrlAndHistory(view, seriesId = null, volumeId = null, chapterIndex = null) {
+        let path = '/';
+        let state = { view: view, seriesId: seriesId, volumeId: volumeId, chapterIndex: chapterIndex };
+
+        switch (view) {
+            case 'home':
+                path = '/';
+                break;
+            case 'series-detail':
+                path = `/series/${seriesId}`;
+                break;
+            case 'volume-read':
+                path = `/series/${seriesId}/volume/${volumeId}`;
+                break;
+            case 'chapter-read': // Changed view name for chapter
+                path = `/series/${seriesId}/volume/${volumeId}/chapter/${chapterIndex}`;
+                break;
+        }
+        history.pushState(state, '', path);
+    },
+
+    // Function to handle initial page load or popstate event
+    async handleNavigation(state) {
+        let view = state ? state.view : null;
+        let seriesId = state ? state.seriesId : null;
+        let volumeId = state ? state.volumeId : null;
+        let chapterIndex = state ? state.chapterIndex : null;
+
+        // If state is null (e.g., initial load or direct URL access), parse URL
+        if (!state) {
+            const pathSegments = window.location.pathname.split('/').filter(segment => segment !== '');
+            if (pathSegments.length === 0) {
+                view = 'home';
+            } else if (pathSegments[0] === 'series' && pathSegments[1]) {
+                seriesId = pathSegments[1];
+                if (pathSegments[2] === 'volume' && pathSegments[3]) {
+                    volumeId = pathSegments[3];
+                    if (pathSegments[4] === 'chapter' && pathSegments[5]) {
+                        chapterIndex = parseInt(pathSegments[5]);
+                        view = 'chapter-read';
+                    } else {
+                        view = 'volume-read';
+                    }
+                } else {
+                    view = 'series-detail';
+                }
+            }
+        }
+
+        // Update appState based on parsed URL or history state
+        appState.currentView = view;
+        appState.currentSeriesId = seriesId;
+        appState.currentVolumeId = volumeId;
+        appState.currentChapterIndex = chapterIndex;
+
+        // Render content based on the determined view
+        switch (appState.currentView) {
+            case 'home':
+                await navigationService.renderHomepage();
+                break;
+            case 'series-detail':
+                await navigationService.showSeriesDetail(appState.currentSeriesId);
+                break;
+            case 'volume-read':
+                await navigationService.showVolume(appState.currentSeriesId, appState.currentVolumeId);
+                break;
+            case 'chapter-read':
+                // For chapter-read, we need to ensure volume data is loaded first
+                // This is a simplified approach; a more robust solution might involve
+                // re-fetching volume data if not in appState.currentVolumeData
+                if (!appState.currentVolumeData || appState.currentVolumeData.id !== appState.currentVolumeId) {
+                    const volumeData = await dataService.fetchJson(`series/${appState.currentSeriesId}/${appState.currentVolumeId}/${appState.currentVolumeId}.json`);
+                    if (volumeData) {
+                        appState.currentVolumeChapters = volumeData.bab;
+                        appState.currentVolumeData = volumeData;
+                    } else {
+                        console.error("Failed to load volume data for chapter navigation.");
+                        // Attempt to navigate to series detail if volume data is missing
+                        await navigationService.showSeriesDetail(appState.currentSeriesId);
+                        return;
+                    }
+                }
+                await navigationService.showChapter(appState.currentSeriesId, appState.currentVolumeId, appState.currentChapterIndex);
+                break;
+            default:
+                // Fallback to homepage if URL is unrecognized
+                await navigationService.renderHomepage();
+                break;
+        }
+    },
 
     async renderHomepage() {
         appState.currentView = 'home';
@@ -330,8 +419,9 @@ const navigationService = {
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
 
-        uiService.renderHomepageContent(seriesIndex); // Dihapus 'await' agar sesuai kode lama
-        // Menghapus updateUrlAndHistory
+        await uiService.renderHomepageContent(seriesIndex); // PENTING: Pastikan ini diawait
+        // Update URL after rendering content
+        navigationService.updateUrlAndHistory('home');
     },
 
     async showSeriesDetail(seriesId) {
@@ -348,8 +438,9 @@ const navigationService = {
 
         if (!info || !volumes) return;
 
-        uiService.renderSeriesDetailContent(info, volumes); // Dihapus 'await' agar sesuai kode lama
-        // Menghapus updateUrlAndHistory
+        await uiService.renderSeriesDetailContent(info, volumes); // PENTING: Pastikan ini diawait
+        // Update URL after rendering content
+        navigationService.updateUrlAndHistory('series-detail', seriesId);
     },
 
     async showVolume(seriesId, volumeId) {
@@ -359,20 +450,27 @@ const navigationService = {
         appState.currentChapterIndex = 0;
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
-        if (!volumeData) return; // Dihapus fallback ke showSeriesDetail
+        if (!volumeData) {
+            // Jika data volume tidak ditemukan, kembali ke detail seri
+            await navigationService.showSeriesDetail(seriesId);
+            return;
+        }
 
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
 
         uiService.createTocSidebar(volumeData.bab);
 
+        // Hanya toggle sidebar terbuka jika di desktop
         if (!appState.isMobile) {
             app.toggleTocSidebar(true);
         } else {
+            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
             app.toggleTocSidebar(false);
         }
 
-        navigationService.showChapter(seriesId, volumeId, 0); // Dihapus 'await' agar sesuai kode lama
+        // Panggil showChapter, yang akan merender konten dan memperbarui URL
+        await navigationService.showChapter(seriesId, volumeId, 0);
     },
 
     async showChapter(seriesId, volumeId, chapterIndex) {
@@ -387,20 +485,28 @@ const navigationService = {
 
         uiService.createTocSidebar(appState.currentVolumeChapters);
 
+        // Hanya toggle sidebar terbuka jika di desktop
         if (!appState.isMobile) {
             app.toggleTocSidebar(true);
         } else {
+            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
             app.toggleTocSidebar(false);
         }
 
         app.applyLayoutClasses();
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
-        if (!chapterData) return; // Dihapus fallback ke showVolume
+        if (!chapterData) {
+            // Jika data bab tidak ditemukan, kembali ke detail volume (atau seri jika volume juga gagal)
+            await navigationService.showVolume(seriesId, volumeId); // Coba kembali ke volume
+            return;
+        }
 
-        uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length); // Dihapus 'await' agar sesuai kode lama
-        // Menghapus updateUrlAndHistory
+        await uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length); // PENTING: Pastikan ini diawait
+        // Update URL after rendering content
+        navigationService.updateUrlAndHistory('chapter-read', seriesId, volumeId, chapterIndex);
 
+        // Scroll to top after rendering chapter content
         DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
@@ -485,12 +591,23 @@ const app = {
 
         window.addEventListener('resize', debounce(app.checkMobile, 200));
 
-        // Menghapus window.onpopstate
-        // Menghapus document.addEventListener('keydown') untuk Escape
+        // Listen for browser's back/forward button clicks
+        window.onpopstate = function(event) {
+            navigationService.handleNavigation(event.state);
+        };
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (appState.isMobile && appState.isTocSidebarOpen) {
+                    app.toggleTocSidebar(false);
+                }
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', function() {
             app.checkMobile();
-            navigationService.renderHomepage(); // Kembali ke pemanggilan langsung renderHomepage
+            // Initial load handling using handleNavigation
+            navigationService.handleNavigation(history.state);
         });
     }
 };
