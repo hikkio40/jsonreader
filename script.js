@@ -19,7 +19,7 @@ const appState = {
     currentVolumeData: null,
 };
 
-const BASE_URL = '/'; // Adjust this to your server's base path if needed (e.g., '/app/' for subdirectories)
+const BASE_URL = '/'; // Sesuaikan jika aplikasi di subdirectory (misalnya, '/myapp/')
 
 const debounce = (func, delay) => {
     let timeout;
@@ -38,7 +38,7 @@ const dataService = {
             const cachedData = localStorage.getItem(this.CACHE_PREFIX + key);
             return cachedData ? JSON.parse(cachedData) : null;
         } catch (e) {
-            console.error('Error reading from cache:', e);
+            console.error('Gagal membaca cache:', e);
             localStorage.removeItem(this.CACHE_PREFIX + key);
             return null;
         }
@@ -48,13 +48,13 @@ const dataService = {
         try {
             localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(data));
         } catch (e) {
-            console.error('Error writing to cache:', e);
+            console.error('Gagal menyimpan ke cache:', e);
         }
     },
 
     async fetchJson(path) {
         const cacheKey = path;
-        const fullUrl = `${BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`; // Ensure correct URL
+        const fullUrl = `${BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`;
 
         const cachedData = this.getCache(cacheKey);
         if (cachedData) {
@@ -64,18 +64,17 @@ const dataService = {
         try {
             const response = await fetch(fullUrl);
             if (!response.ok) {
-                throw new Error(`Failed to load ${fullUrl}: ${response.statusText}`);
+                throw new Error(`Gagal memuat ${fullUrl}: ${response.statusText}`);
             }
-            // Check Content-Type to ensure it's JSON
             const contentType = response.headers.get('Content-Type');
             if (!contentType || !contentType.includes('application/json')) {
-                throw new Error(`Expected JSON, but received ${contentType || 'unknown content type'}`);
+                throw new Error(`Diharapkan JSON, tetapi diterima ${contentType || 'tipe konten tidak diketahui'}`);
             }
             const data = await response.json();
             this.setCache(cacheKey, data);
             return data;
         } catch (error) {
-            console.error(`Error fetching JSON from ${fullUrl}:`, error);
+            console.error(`Gagal memuat JSON dari ${fullUrl}:`, error);
             DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
             return null;
         }
@@ -100,13 +99,13 @@ const uiService = {
 
     createTocSidebar(chapters) {
         if (DOMElements.tocSidebar) {
-            DOMElements.tocSidebar.remove(); // Remove existing if any
+            DOMElements.tocSidebar.remove();
             DOMElements.tocSidebar = null;
         }
 
         const tocSidebarElement = document.createElement('aside');
         tocSidebarElement.id = 'tocSidebar';
-        tocSidebarElement.classList.add('app-sidebar'); // Use a common class for styling
+        tocSidebarElement.classList.add('app-sidebar');
 
         let chaptersHtml = ``;
         chapters.forEach((chapter, index) => {
@@ -138,13 +137,11 @@ const uiService = {
         document.body.appendChild(tocSidebarElement);
         DOMElements.tocSidebar = tocSidebarElement;
 
-        // Attach event listener for close button
         const closeButton = document.getElementById('closeTocSidebar');
         if (closeButton) {
             closeButton.addEventListener('click', () => app.toggleTocSidebar(false));
         }
 
-        // Ensure it's hidden on mobile initially if not explicitly opened
         if (appState.isMobile) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
         }
@@ -154,7 +151,7 @@ const uiService = {
         if (DOMElements.tocSidebar) {
             DOMElements.tocSidebar.remove();
             DOMElements.tocSidebar = null;
-            appState.isTocSidebarOpen = false; // Reset state
+            appState.isTocSidebarOpen = false;
         }
     },
 
@@ -304,7 +301,7 @@ const uiService = {
                 
                 <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
                     <div>${prevButton}</div>
-                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex +1} dari ${totalChapters}</div>
+                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
                     <div>${nextButton}</div>
                 </div>
             </div>
@@ -319,12 +316,17 @@ const navigationService = {
         appState.currentSeriesId = null;
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
+        appState.currentVolumeChapters = [];
+        appState.currentVolumeData = null;
 
-        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
-        app.applyLayoutClasses(); // Sesuaikan layout untuk homepage
+        uiService.removeTocSidebar();
+        app.applyLayoutClasses();
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
-        if (!seriesIndex) return;
+        if (!seriesIndex) {
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat daftar seri. Silakan coba lagi nanti.</div>`;
+            return;
+        }
 
         history.pushState({ view: 'home' }, '', '/');
         uiService.renderHomepageContent(seriesIndex);
@@ -335,15 +337,17 @@ const navigationService = {
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
+        appState.currentVolumeChapters = [];
+        appState.currentVolumeData = null;
 
-        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
-        app.applyLayoutClasses(); // Sesuaikan layout untuk detail seri
+        uiService.removeTocSidebar();
+        app.applyLayoutClasses();
 
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
 
         if (!info || !volumes) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat detail seri. Silakan coba lagi nanti.</div>`;
             return;
         }
 
@@ -359,20 +363,18 @@ const navigationService = {
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
         if (!volumeData) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat data volume. Silakan coba lagi nanti.</div>`;
             return;
         }
 
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
 
-        uiService.createTocSidebar(volumeData.bab); // Buat dan isi TOC sidebar
+        uiService.createTocSidebar(volumeData.bab);
 
-        // Hanya toggle sidebar terbuka jika di desktop
         if (!appState.isMobile) {
             app.toggleTocSidebar(true);
         } else {
-            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
             app.toggleTocSidebar(false);
         }
 
@@ -390,48 +392,43 @@ const navigationService = {
             return;
         }
 
-        uiService.createTocSidebar(appState.currentVolumeChapters); // Buat/perbarui TOC sidebar dengan bab aktif
+        uiService.createTocSidebar(appState.currentVolumeChapters);
 
-        // Hanya toggle sidebar terbuka jika di desktop
         if (!appState.isMobile) {
             app.toggleTocSidebar(true);
         } else {
-            // Di mobile, pastikan sidebar tertutup saat masuk volume/chapter
             app.toggleTocSidebar(false);
         }
 
-        app.applyLayoutClasses(); // Sesuaikan layout untuk tampilan bab
+        app.applyLayoutClasses();
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
         if (!chapterData) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat bab. Silakan coba lagi nanti.</div>`;
             return;
         }
 
         history.pushState({ view: 'volume-read', seriesId, volumeId, chapterIndex }, '', `/series/${seriesId}/${volumeId}/${chapterIndex + 1}`);
         uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
 
-        // Scroll to top after rendering chapter content
         DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
     },
 
-    handlePopstate(event) {
+    async handlePopstate(event) {
         const state = event.state || {};
         if (state.view === 'home') {
-            navigationService.renderHomepage();
+            await navigationService.renderHomepage();
         } else if (state.view === 'series-detail' && state.seriesId) {
-            navigationService.showSeriesDetail(state.seriesId);
+            await navigationService.showSeriesDetail(state.seriesId);
         } else if (state.view === 'volume-read' && state.seriesId && state.volumeId) {
             appState.currentSeriesId = state.seriesId;
             appState.currentVolumeId = state.volumeId;
-            navigationService.showVolume(state.seriesId, state.volumeId).then(() => {
-                if (state.chapterIndex !== undefined) {
-                    navigationService.showChapter(state.seriesId, state.volumeId, state.chapterIndex);
-                }
-            });
+            await navigationService.showVolume(state.seriesId, state.volumeId);
+            if (state.chapterIndex !== undefined) {
+                await navigationService.showChapter(state.seriesId, state.volumeId, state.chapterIndex);
+            }
         } else {
-            // Fallback to homepage if state is invalid or incomplete
-            navigationService.renderHomepage();
+            await navigationService.renderHomepage();
         }
     }
 };
@@ -439,15 +436,11 @@ const navigationService = {
 const app = {
     applyLayoutClasses() {
         if (appState.isMobile) {
-            // Mobile: Konten utama penuh
             DOMElements.mainContent.classList.add('main-mobile-full');
-            DOMElements.mainContent.style.marginLeft = '0'; // Pastikan margin kiri 0 di mobile
-            DOMElements.mainAppHeader.style.left = '0'; // Header selalu di kiri di mobile
-            
-            // Atur visibilitas tombol toggle di header utama
+            DOMElements.mainContent.style.marginLeft = '0';
+            DOMElements.mainAppHeader.style.left = '0';
             DOMElements.sidebarToggle.style.display = 'block';
 
-            // Atur sidebar TOC (jika ada)
             if (DOMElements.tocSidebar) {
                 if (appState.isTocSidebarOpen) {
                     DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
@@ -457,28 +450,22 @@ const app = {
                     DOMElements.overlay.classList.add('hidden');
                 }
             } else {
-                DOMElements.overlay.classList.add('hidden'); // Sembunyikan overlay jika tidak ada sidebar TOC
+                DOMElements.overlay.classList.add('hidden');
             }
-
         } else {
-            // Desktop: Konten utama menyesuaikan dengan sidebar TOC (jika ada)
             DOMElements.mainContent.classList.remove('main-mobile-full');
-            DOMElements.overlay.classList.add('hidden'); // Overlay selalu tersembunyi di desktop
-
-            // Sembunyikan tombol toggle di desktop
+            DOMElements.overlay.classList.add('hidden');
             DOMElements.sidebarToggle.style.display = 'none';
 
             if (DOMElements.tocSidebar) {
-                // Jika sidebar TOC ada, pastikan terlihat dan sesuaikan margin konten utama
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-                DOMElements.mainContent.style.marginLeft = '256px'; // Lebar sidebar TOC
-                DOMElements.mainAppHeader.style.left = '256px'; // Header utama bergeser
-                document.body.classList.add('toc-active'); // Tambahkan kelas ke body untuk CSS
+                DOMElements.mainContent.style.marginLeft = '256px';
+                DOMElements.mainAppHeader.style.left = '256px';
+                document.body.classList.add('toc-active');
             } else {
-                // Jika tidak ada sidebar TOC, konten utama penuh
                 DOMElements.mainContent.style.marginLeft = '0';
-                DOMElements.mainAppHeader.style.left = '0'; // Header utama di kiri
-                document.body.classList.remove('toc-active'); // Hapus kelas dari body
+                DOMElements.mainAppHeader.style.left = '0';
+                document.body.classList.remove('toc-active');
             }
         }
     },
@@ -493,7 +480,6 @@ const app = {
     },
 
     toggleTocSidebar(forceState = null) {
-        // Hanya beroperasi jika sidebar TOC sudah ada
         if (!DOMElements.tocSidebar) return;
 
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
@@ -508,7 +494,6 @@ const app = {
                 DOMElements.overlay.classList.add('hidden');
             }
         } else {
-            // Di desktop, sidebar TOC selalu terlihat jika ada
             DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
             DOMElements.overlay.classList.add('hidden');
         }
@@ -519,7 +504,7 @@ const app = {
 
         DOMElements.overlay.addEventListener('click', function() {
             if (appState.isMobile) {
-                app.toggleTocSidebar(false); // Tutup sidebar TOC saat overlay diklik di mobile
+                app.toggleTocSidebar(false);
             }
         });
 
@@ -535,12 +520,11 @@ const app = {
             }
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             app.checkMobile();
-            // Initialize based on current URL
             const path = window.location.pathname;
             if (path === '/' || path === '') {
-                navigationService.renderHomepage();
+                await navigationService.renderHomepage();
             } else {
                 const match = path.match(/^\/series\/([^/]+)(?:\/([^/]+)(?:\/(\d+))?)?$/);
                 if (match) {
@@ -548,18 +532,17 @@ const app = {
                     if (volumeId && chapterIndex) {
                         appState.currentSeriesId = seriesId;
                         appState.currentVolumeId = volumeId;
-                        navigationService.showVolume(seriesId, volumeId).then(() => {
-                            navigationService.showChapter(seriesId, volumeId, parseInt(chapterIndex) - 1);
-                        });
+                        await navigationService.showVolume(seriesId, volumeId);
+                        await navigationService.showChapter(seriesId, volumeId, parseInt(chapterIndex) - 1);
                     } else if (volumeId) {
                         appState.currentSeriesId = seriesId;
                         appState.currentVolumeId = volumeId;
-                        navigationService.showVolume(seriesId, volumeId);
+                        await navigationService.showVolume(seriesId, volumeId);
                     } else {
-                        navigationService.showSeriesDetail(seriesId);
+                        await navigationService.showSeriesDetail(seriesId);
                     }
                 } else {
-                    navigationService.renderHomepage();
+                    await navigationService.renderHomepage();
                 }
             }
         });
