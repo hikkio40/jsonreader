@@ -19,6 +19,8 @@ const appState = {
     currentVolumeData: null,
 };
 
+const BASE_URL = '/'; // Adjust this to your server's base path if needed (e.g., '/app/' for subdirectories)
+
 const debounce = (func, delay) => {
     let timeout;
     return function(...args) {
@@ -52,6 +54,7 @@ const dataService = {
 
     async fetchJson(path) {
         const cacheKey = path;
+        const fullUrl = `${BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`; // Ensure correct URL
 
         const cachedData = this.getCache(cacheKey);
         if (cachedData) {
@@ -59,22 +62,27 @@ const dataService = {
         }
 
         try {
-            const response = await fetch(path);
+            const response = await fetch(fullUrl);
             if (!response.ok) {
-                throw new Error(`Failed to load ${path}: ${response.statusText}`);
+                throw new Error(`Failed to load ${fullUrl}: ${response.statusText}`);
+            }
+            // Check Content-Type to ensure it's JSON
+            const contentType = response.headers.get('Content-Type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Expected JSON, but received ${contentType || 'unknown content type'}`);
             }
             const data = await response.json();
             this.setCache(cacheKey, data);
             return data;
         } catch (error) {
-            console.error('Error fetching JSON:', error);
+            console.error(`Error fetching JSON from ${fullUrl}:`, error);
             DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
             return null;
         }
     },
 
     getChapterImagePath(seriesId, volumeId, imageName) {
-        return `images/${seriesId}/${volumeId}/${imageName}`;
+        return `${BASE_URL}images/${seriesId}/${volumeId}/${imageName}`;
     }
 };
 
@@ -408,6 +416,9 @@ const navigationService = {
                     navigationService.showChapter(state.seriesId, state.volumeId, state.chapterIndex);
                 });
             }
+        } else {
+            // Fallback to homepage if state is invalid
+            navigationService.renderHomepage();
         }
     }
 };
