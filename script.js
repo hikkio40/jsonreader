@@ -6,7 +6,7 @@ const DOMElements = {
     dynamicContent: document.getElementById('dynamicContent'),
     overlay: document.getElementById('overlay'),
     tocSidebar: null, // Reference to the dynamically created TOC sidebar
-    headerMainNav: document.querySelector('.header-main-nav'), // New: Reference to the main nav in header
+    headerMainNav: document.querySelector('.header-main-nav'), // Reference to the main nav in header
 };
 
 const appState = {
@@ -98,8 +98,6 @@ const uiService = {
             DOMElements.tocSidebar = tocSidebarElement;
 
             // Attach event listener for close button
-            // This button will be dynamically added/removed with content, so we need to re-attach
-            // Or use event delegation if content changes frequently. For now, re-attach.
             tocSidebarElement.addEventListener('click', (event) => {
                 if (event.target.closest('#closeTocSidebar')) {
                     app.toggleTocSidebar(false);
@@ -269,7 +267,7 @@ const uiService = {
                     
                     <div class="flex-1 series-info-section">
                         <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
-                        <div class="flex items-center gap-6 text-gray-600 mb-4 series-metadata">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-600 mb-4 series-metadata">
                             <div class="flex items-center series-author">
                                 <span class="material-icons text-sm mr-1 align-middle">person</span>
                                 ${info.penulis}
