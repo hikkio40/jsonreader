@@ -79,7 +79,8 @@ const dataService = {
         } catch (error) {
             console.error('Error fetching JSON:', error);
             // Display a more specific error message to the user
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat konten. Pastikan file data tersedia di lokasi yang benar. Detail error: ${error.message}</div>`;
+            // Menampilkan jalur file yang gagal dimuat langsung di pesan error
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat konten dari <strong>${path}</strong>. Pastikan file data tersedia di lokasi yang benar. Detail error: ${error.message}</div>`;
             return null;
         }
     },
@@ -508,6 +509,7 @@ const navigationService = {
             return;
         }
 
+        // KESALAHAN KRITIS DI SINI: Seharusnya memanggil uiService.renderChapterContent, bukan uiService.renderContentWithTransition
         await uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length); // PENTING: Pastikan ini diawait
         // Update URL after rendering content
         navigationService.updateUrlAndHistory('chapter-read', seriesId, volumeId, chapterIndex);
