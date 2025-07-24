@@ -85,6 +85,22 @@ const uiService = {
         await new Promise(resolve => setTimeout(resolve, 300));
         DOMElements.dynamicContent.innerHTML = contentHtml;
         DOMElements.dynamicContent.classList.remove('fade-out');
+
+        // Hapus semua kelas tampilan sebelumnya
+        DOMElements.dynamicContent.classList.remove('homepage-view-container', 'series-detail-view-container', 'volume-read-view-container');
+
+        // Tambahkan kelas tampilan yang sesuai
+        switch (appState.currentView) {
+            case 'home':
+                DOMElements.dynamicContent.classList.add('homepage-view-container');
+                break;
+            case 'series-detail':
+                DOMElements.dynamicContent.classList.add('series-detail-view-container');
+                break;
+            case 'volume-read':
+                DOMElements.dynamicContent.classList.add('volume-read-view-container');
+                break;
+        }
     },
 
     // Function to create or update the single dynamic sidebar content
@@ -255,7 +271,7 @@ const uiService = {
                     Kembali ke Beranda
                 </button>
             </div>
-            <div class="series-detail-view-container">
+            <div class="series-detail-content-wrapper">
                 <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
                     <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
