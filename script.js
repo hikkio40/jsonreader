@@ -437,10 +437,13 @@ const navigationService = {
     },
 
     async showVolume(seriesId, volumeId) {
-        appState.currentView = 'volume-read';
+        appState.currentView = 'volume-read'; // Set view state for volume
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = volumeId;
-        appState.currentChapterIndex = 0;
+        appState.currentChapterIndex = 0; // Reset chapter index for new volume
+
+        // Perbarui URL ke level volume terlebih dahulu
+        navigationService.updateUrlAndHistory('volume-read', seriesId, volumeId);
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
         if (!volumeData) {
@@ -462,7 +465,7 @@ const navigationService = {
             app.toggleTocSidebar(false);
         }
 
-        // Panggil showChapter, yang akan merender konten dan memperbarui URL
+        // Sekarang, navigasi ke bab pertama. showChapter akan memperbarui URL ke chapter-read.
         await navigationService.showChapter(seriesId, volumeId, 0);
     },
 
