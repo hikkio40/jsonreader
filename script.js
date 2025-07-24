@@ -81,6 +81,10 @@ const dataService = {
         }
     },
 
+    getImagePath(path) {
+        return `${BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`;
+    },
+
     getChapterImagePath(seriesId, volumeId, imageName) {
         return `${BASE_URL}images/${seriesId}/${volumeId}/${imageName}`;
     }
@@ -171,7 +175,7 @@ const uiService = {
             seriesHtml += `
                 <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.showSeriesDetail('${series.id}')">
                     <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
-                        ${series.cover ? `<img src="${series.cover}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${series.cover ? `<img src="${dataService.getImagePath(series.cover)}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
                         ${series.format ? `<span class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white rounded-full ${badgeColorClass}">${series.format}</span>` : ''}
@@ -196,7 +200,7 @@ const uiService = {
             volumesHtml += `
                 <div class="cursor-pointer hover:opacity-80 transition-opacity volume-card" onclick="navigationService.showVolume('${appState.currentSeriesId}', '${volume.id}')">
                     <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 flex items-center justify-center overflow-hidden volume-cover-placeholder">
-                        ${volume.cover ? `<img src="${volume.cover}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image" loading="lazy">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${volume.cover ? `<img src="${dataService.getImagePath(volume.cover)}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image" loading="lazy">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
                     </div>
@@ -210,9 +214,9 @@ const uiService = {
                 <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
                     <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
-                            ${info.cover ? `<img src="${info.cover}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            ${info.cover ? `<img src="${dataService.getImagePath(info.cover)}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>`}
+                            </svg>`}
                         </div>
                     </div>
                     
@@ -300,7 +304,7 @@ const uiService = {
                 
                 <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
                     <div>${prevButton}</div>
-                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
+                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex +1} dari ${totalChapters}</div>
                     <div>${nextButton}</div>
                 </div>
             </div>
@@ -338,7 +342,10 @@ const navigationService = {
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
 
-        if (!info || !volumes) return;
+        if (!info || !volumes) {
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            return;
+        }
 
         history.pushState({ view: 'series-detail', seriesId }, '', `/series/${seriesId}`);
         uiService.renderSeriesDetailContent(info, volumes);
@@ -351,7 +358,10 @@ const navigationService = {
         appState.currentChapterIndex = 0;
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
-        if (!volumeData) return;
+        if (!volumeData) {
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            return;
+        }
 
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
@@ -393,7 +403,10 @@ const navigationService = {
         app.applyLayoutClasses(); // Sesuaikan layout untuk tampilan bab
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
-        if (!chapterData) return;
+        if (!chapterData) {
+            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+            return;
+        }
 
         history.pushState({ view: 'volume-read', seriesId, volumeId, chapterIndex }, '', `/series/${seriesId}/${volumeId}/${chapterIndex + 1}`);
         uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
@@ -406,18 +419,18 @@ const navigationService = {
         const state = event.state || {};
         if (state.view === 'home') {
             navigationService.renderHomepage();
-        } else if (state.view === 'series-detail') {
+        } else if (state.view === 'series-detail' && state.seriesId) {
             navigationService.showSeriesDetail(state.seriesId);
-        } else if (state.view === 'volume-read') {
-            if (state.chapterIndex !== undefined) {
-                appState.currentSeriesId = state.seriesId;
-                appState.currentVolumeId = state.volumeId;
-                navigationService.showVolume(state.seriesId, state.volumeId).then(() => {
+        } else if (state.view === 'volume-read' && state.seriesId && state.volumeId) {
+            appState.currentSeriesId = state.seriesId;
+            appState.currentVolumeId = state.volumeId;
+            navigationService.showVolume(state.seriesId, state.volumeId).then(() => {
+                if (state.chapterIndex !== undefined) {
                     navigationService.showChapter(state.seriesId, state.volumeId, state.chapterIndex);
-                });
-            }
+                }
+            });
         } else {
-            // Fallback to homepage if state is invalid
+            // Fallback to homepage if state is invalid or incomplete
             navigationService.renderHomepage();
         }
     }
@@ -533,10 +546,14 @@ const app = {
                 if (match) {
                     const [, seriesId, volumeId, chapterIndex] = match;
                     if (volumeId && chapterIndex) {
+                        appState.currentSeriesId = seriesId;
+                        appState.currentVolumeId = volumeId;
                         navigationService.showVolume(seriesId, volumeId).then(() => {
                             navigationService.showChapter(seriesId, volumeId, parseInt(chapterIndex) - 1);
                         });
                     } else if (volumeId) {
+                        appState.currentSeriesId = seriesId;
+                        appState.currentVolumeId = volumeId;
                         navigationService.showVolume(seriesId, volumeId);
                     } else {
                         navigationService.showSeriesDetail(seriesId);
