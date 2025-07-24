@@ -85,22 +85,6 @@ const uiService = {
         await new Promise(resolve => setTimeout(resolve, 300));
         DOMElements.dynamicContent.innerHTML = contentHtml;
         DOMElements.dynamicContent.classList.remove('fade-out');
-
-        // Hapus semua kelas tampilan sebelumnya
-        DOMElements.dynamicContent.classList.remove('homepage-view-container', 'series-detail-view-container', 'volume-read-view-container');
-
-        // Tambahkan kelas tampilan yang sesuai
-        switch (appState.currentView) {
-            case 'home':
-                DOMElements.dynamicContent.classList.add('homepage-view-container');
-                break;
-            case 'series-detail':
-                DOMElements.dynamicContent.classList.add('series-detail-view-container');
-                break;
-            case 'volume-read':
-                DOMElements.dynamicContent.classList.add('volume-read-view-container');
-                break;
-        }
     },
 
     // Function to create or update the single dynamic sidebar content
@@ -265,13 +249,13 @@ const uiService = {
         });
 
         const contentHtml = `
-            <div class="mb-6 series-detail-back-button-container">
+            <div class="mb-6">
                 <button onclick="navigationService.renderHomepage()" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-homepage-button">
                     <span class="material-icons mr-2">arrow_back</span>
                     Kembali ke Beranda
                 </button>
             </div>
-            <div class="series-detail-content-wrapper">
+            <div class="series-detail-container">
                 <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
                     <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
@@ -284,27 +268,27 @@ const uiService = {
                     <div class="flex-1 series-info-section">
                         <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-600 mb-4 series-metadata">
-                            <div class="flex items-center series-author-info">
+                            <div class="flex items-center series-author">
                                 <span class="material-icons text-sm mr-1 align-middle">person</span>
                                 ${info.penulis}
                             </div>
-                            <div class="flex items-center series-release-date-info">
+                            <div class="flex items-center series-release-date">
                                 <span class="material-icons text-sm mr-1 align-middle">calendar_today</span>
                                 ${info.rilis}
                             </div>
-                            <div class="flex items-center series-genre-info">
+                            <div class="flex items-center series-genre">
                                 <span class="material-icons text-sm mr-1">label</span>
                                 ${info.genre}
                             </div>
-                            <div class="flex items-center series-status-info">
+                            <div class="flex items-center series-status">
                                 <span class="material-icons text-sm mr-1">info</span>
                                 ${info.status}
                             </div>
                         </div>
                         
-                        <div class="series-synopsis-section">
+                        <div class="series-synopsis">
                             <h3 class="text-xl font-semibold mb-3">Sinopsis</h3>
-                            <p class="mb-4 series-synopsis-text">${info.deskripsi}</p>
+                            <p class="mb-4">${info.deskripsi}</p>
                         </div>
                     </div>
                 </div>
@@ -359,18 +343,18 @@ const uiService = {
             </button>` : '';
         
         const contentHtml = `
-            <div class="chapter-navigation-top-controls">
+            <div class="chapter-navigation-top">
                 <button onclick="navigationService.showVolume('${appState.currentSeriesId}', '${appState.currentVolumeId}')" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-volume-button">
                     <span class="material-icons mr-2">arrow_back</span>
                     Kembali ke Volume
                 </button>
             </div>
             
-            <div class="chapter-content-display">
+            <div class="chapter-content-wrapper">
                 <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
                 ${chapterContentHtml}
                 
-                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom-controls">
+                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
                     <div>${prevButton}</div>
                     <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
                     <div>${nextButton}</div>
