@@ -1,3 +1,6 @@
+// script.js
+
+// DOM & State
 const DOMElements = {
     sidebarToggle: document.getElementById('sidebarToggle'),
     mainAppHeader: document.getElementById('mainAppHeader'),
@@ -5,13 +8,13 @@ const DOMElements = {
     mainContent: document.getElementById('mainContent'),
     dynamicContent: document.getElementById('dynamicContent'),
     overlay: document.getElementById('overlay'),
-    tocSidebar: null, // Reference to the dynamically created TOC sidebar
+    tocSidebar: null,
 };
 
 const appState = {
     isMobile: false,
-    isTocSidebarOpen: false, // Tracks if TOC sidebar is open (mainly for mobile)
-    currentView: 'home', // 'home', 'series-detail', 'volume-read'
+    isTocSidebarOpen: false,
+    currentView: 'home',
     currentSeriesId: null,
     currentVolumeId: null,
     currentChapterIndex: 0,
@@ -19,14 +22,11 @@ const appState = {
     currentVolumeData: null,
 };
 
-const BASE_URL = '/'; // Sesuaikan jika aplikasi di subdirectory (misalnya, '/myapp/')
-
 const debounce = (func, delay) => {
     let timeout;
-    return function(...args) {
-        const context = this;
+    return function (...args) {
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), delay);
+        timeout = setTimeout(() => func.apply(this, args), delay);
     };
 };
 
@@ -35,11 +35,10 @@ const dataService = {
 
     getCache(key) {
         try {
-            const cachedData = localStorage.getItem(this.CACHE_PREFIX + key);
-            return cachedData ? JSON.parse(cachedData) : null;
+            const cached = localStorage.getItem(this.CACHE_PREFIX + key);
+            return cached ? JSON.parse(cached) : null;
         } catch (e) {
-            console.error('Gagal membaca cache:', e);
-            localStorage.removeItem(this.CACHE_PREFIX + key);
+            console.error('Cache read error:', e);
             return null;
         }
     },
@@ -48,103 +47,37 @@ const dataService = {
         try {
             localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(data));
         } catch (e) {
-            console.error('Gagal menyimpan ke cache:', e);
+            console.error('Cache write error:', e);
         }
     },
 
     async fetchJson(path) {
-        const cacheKey = path;
-        const fullUrl = `${BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`;
-
-        const cachedData = this.getCache(cacheKey);
-        if (cachedData) {
-            return cachedData;
-        }
-
+        const cached = this.getCache(path);
+        if (cached) return cached;
         try {
-            const response = await fetch(fullUrl);
-            if (!response.ok) {
-                throw new Error(`Gagal memuat ${fullUrl}: ${response.statusText}`);
-            }
-            const contentType = response.headers.get('Content-Type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error(`Diharapkan JSON, tetapi diterima ${contentType || 'tipe konten tidak diketahui'}`);
-            }
-            const data = await response.json();
-            this.setCache(cacheKey, data);
+            const res = await fetch(path);
+            if (!res.ok) throw new Error(res.statusText);
+            const data = await res.json();
+            this.setCache(path, data);
             return data;
-        } catch (error) {
-            console.error(`Gagal memuat JSON dari ${fullUrl}:`, error);
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+        } catch (e) {
+            console.error('Fetch JSON failed:', e);
+            DOMElements.dynamicContent.innerHTML = '<div class="text-center py-10 text-red-500">Konten belum tersedia.</div>';
             return null;
         }
     },
 
-    getImagePath(path) {
-        return `${BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`;
-    },
-
     getChapterImagePath(seriesId, volumeId, imageName) {
-        return `${BASE_URL}images/${seriesId}/${volumeId}/${imageName}`;
-    }
+        return `images/${seriesId}/${volumeId}/${imageName}`;
+    },
 };
 
 const uiService = {
-    async renderContentWithTransition(contentHtml) {
+    async renderContent(contentHtml) {
         DOMElements.dynamicContent.classList.add('fade-out');
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(r => setTimeout(r, 300));
         DOMElements.dynamicContent.innerHTML = contentHtml;
         DOMElements.dynamicContent.classList.remove('fade-out');
-    },
-
-    createTocSidebar(chapters) {
-        if (DOMElements.tocSidebar) {
-            DOMElements.tocSidebar.remove();
-            DOMElements.tocSidebar = null;
-        }
-
-        const tocSidebarElement = document.createElement('aside');
-        tocSidebarElement.id = 'tocSidebar';
-        tocSidebarElement.classList.add('app-sidebar');
-
-        let chaptersHtml = ``;
-        chapters.forEach((chapter, index) => {
-            const isActive = index === appState.currentChapterIndex ? 'active' : '';
-            chaptersHtml += `
-                <li class="toc-menu-item">
-                    <a href="#" onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); return false;" class="flex items-center ${isActive}">
-                        <span class="material-icons text-xl flex-shrink-0 mr-2">menu_book</span>
-                        <span class="text-sm">${chapter.judul}</span>
-                    </a>
-                </li>
-            `;
-        });
-
-        tocSidebarElement.innerHTML = `
-            <header class="toc-header">
-                <h2 class="text-xl font-semibold">Daftar Isi Volume</h2>
-                <button id="closeTocSidebar" class="p-2 hover:bg-gray-100 rounded md:hidden">
-                    <span class="material-icons text-xl">close</span>
-                </button>
-            </header>
-            <nav class="toc-nav">
-                <ul class="space-y-2">
-                    ${chaptersHtml}
-                </ul>
-            </nav>
-        `;
-
-        document.body.appendChild(tocSidebarElement);
-        DOMElements.tocSidebar = tocSidebarElement;
-
-        const closeButton = document.getElementById('closeTocSidebar');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => app.toggleTocSidebar(false));
-        }
-
-        if (appState.isMobile) {
-            DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-        }
     },
 
     removeTocSidebar() {
@@ -155,281 +88,152 @@ const uiService = {
         }
     },
 
-    async renderHomepageContent(seriesIndex) {
-        let seriesHtml = ``;
-        seriesIndex.forEach(series => {
-            let badgeColorClass = '';
-            if (series.format === 'Light Novel') {
-                badgeColorClass = 'bg-blue-500';
-            } else if (series.format === 'Manga') {
-                badgeColorClass = 'bg-green-500';
-            } else if (series.format === 'Web Novel') {
-                badgeColorClass = 'bg-purple-500';
-            } else {
-                badgeColorClass = 'bg-gray-500';
-            }
+    createTocSidebar(chapters) {
+        uiService.removeTocSidebar();
+        const aside = document.createElement('aside');
+        aside.id = 'tocSidebar';
+        aside.className = 'app-sidebar';
 
-            seriesHtml += `
-                <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.showSeriesDetail('${series.id}')">
-                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
-                        ${series.cover ? `<img src="${dataService.getImagePath(series.cover)}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>`}
-                        ${series.format ? `<span class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white rounded-full ${badgeColorClass}">${series.format}</span>` : ''}
-                    </div>
-                    <h3 class="text-sm font-medium line-clamp-2 series-title">${series.judul}</h3>
-                </article>
-            `;
-        });
-
-        const contentHtml = `
-            <h2 class="text-2xl font-semibold mb-8 page-title">Light Novel Terbaru</h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 series-grid">
-                ${seriesHtml}
-            </div>
+        aside.innerHTML = `
+            <header class="toc-header">
+                <h2 class="text-xl font-semibold">Daftar Isi Volume</h2>
+                <button id="closeTocSidebar" class="p-2 hover:bg-gray-100 rounded md:hidden">
+                    <span class="material-icons text-xl">close</span>
+                </button>
+            </header>
+            <nav class="toc-nav">
+                <ul class="space-y-2">
+                    ${chapters.map((ch, i) => `
+                        <li class="toc-menu-item">
+                            <a href="#" class="flex items-center ${i === appState.currentChapterIndex ? 'active' : ''}"
+                                onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${i}); return false;">
+                                <span class="material-icons mr-2">menu_book</span>
+                                ${ch.judul}
+                            </a>
+                        </li>
+                    `).join('')}
+                </ul>
+            </nav>
         `;
-        uiService.renderContentWithTransition(contentHtml);
+
+        document.body.appendChild(aside);
+        DOMElements.tocSidebar = aside;
+
+        document.getElementById('closeTocSidebar')?.addEventListener('click', () => app.toggleTocSidebar(false));
+
+        if (appState.isMobile) {
+            aside.classList.add('toc-sidebar-hidden');
+        }
     },
-
-    async renderSeriesDetailContent(info, volumes) {
-        let volumesHtml = '';
-        volumes.forEach(volume => {
-            volumesHtml += `
-                <div class="cursor-pointer hover:opacity-80 transition-opacity volume-card" onclick="navigationService.showVolume('${appState.currentSeriesId}', '${volume.id}')">
-                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 flex items-center justify-center overflow-hidden volume-cover-placeholder">
-                        ${volume.cover ? `<img src="${dataService.getImagePath(volume.cover)}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image" loading="lazy">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>`}
-                    </div>
-                    <h4 class="text-xs font-medium text-center volume-title">${volume.judul}</h4>
-                </div>
-            `;
-        });
-
-        const contentHtml = `
-            <div class="series-detail-container">
-                <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
-                    <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
-                        <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
-                            ${info.cover ? `<img src="${dataService.getImagePath(info.cover)}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>`}
-                        </div>
-                    </div>
-                    
-                    <div class="flex-1 series-info-section">
-                        <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
-                        <div class="flex items-center gap-6 text-gray-600 mb-4 series-metadata">
-                            <div class="flex items-center series-author">
-                                <span class="material-icons text-sm mr-1 align-middle">person</span>
-                                ${info.penulis}
-                            </div>
-                            <div class="flex items-center series-release-date">
-                                <span class="material-icons text-sm mr-1 align-middle">calendar_today</span>
-                                ${info.rilis}
-                            </div>
-                            <div class="flex items-center series-genre">
-                                <span class="material-icons text-sm mr-1">label</span>
-                                ${info.genre}
-                            </div>
-                            <div class="flex items-center series-status">
-                                <span class="material-icons text-sm mr-1">info</span>
-                                ${info.status}
-                            </div>
-                        </div>
-                        
-                        <div class="series-synopsis">
-                            <h3 class="text-xl font-semibold mb-3">Sinopsis</h3>
-                            <p class="mb-4">${info.deskripsi}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="prose max-w-none series-volumes-section">
-                    <h3 class="text-xl font-semibold mb-3">Volume Terkait</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 volumes-grid">
-                        ${volumesHtml}
-                    </div>
-                </div>
-            </div>
-        `;
-        uiService.renderContentWithTransition(contentHtml);
-    },
-
-    async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
-        let chapterContentHtml = '';
-        chapterData.konten.forEach(item => {
-            if (item.paragraf) {
-                chapterContentHtml += `<p class="mb-4 chapter-paragraph">${item.paragraf}</p>`;
-            } else if (item.gambar) {
-                chapterContentHtml += `
-                    <div class="my-6 text-center chapter-image-wrapper">
-                        <img src="${dataService.getChapterImagePath(appState.currentSeriesId, appState.currentVolumeId, item.gambar)}" alt="Gambar ilustrasi" class="max-w-full h-auto mx-auto rounded-lg shadow-md chapter-image" loading="lazy">
-                    </div>
-                `;
-            } else if (item.kutipan) {
-                chapterContentHtml += `
-                    <blockquote class="border-l-4 border-gray-300 pl-4 py-2 my-4 italic text-gray-700 chapter-quote">
-                        "${item.kutipan}"
-                    </blockquote>
-                `;
-            } else if (item.dialog) {
-                let dialogHtml = '';
-                item.dialog.forEach(d => {
-                    dialogHtml += `<p class="mb-2 chapter-dialog-line"><strong class="text-blue-700 chapter-dialog-character">${d.karakter}:</strong> <span class="chapter-dialog-speech">${d.ucapan}</span></p>`;
-                });
-                chapterContentHtml += `<div class="bg-gray-50 p-4 rounded-lg my-4 chapter-dialog-block">${dialogHtml}</div>`;
-            }
-        });
-        
-        const prevButton = chapterIndex > 0 ? 
-            `<button onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex - 1})" class="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded chapter-nav-button chapter-nav-prev">
-                <span class="material-icons mr-2">arrow_back</span>
-                Bab Sebelumnya
-            </button>` : '';
-        
-        const nextButton = chapterIndex < totalChapters - 1 ? 
-            `<button onclick="navigationService.showChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex + 1})" class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded chapter-nav-button chapter-nav-next">
-                Bab Selanjutnya
-                <span class="material-icons ml-2">arrow_forward</span>
-            </button>` : '';
-        
-        const contentHtml = `
-            <div class="chapter-content-wrapper">
-                <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
-                ${chapterContentHtml}
-                
-                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
-                    <div>${prevButton}</div>
-                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
-                    <div>${nextButton}</div>
-                </div>
-            </div>
-        `;
-        uiService.renderContentWithTransition(contentHtml);
-    }
 };
 
 const navigationService = {
     async renderHomepage() {
+        history.pushState(null, '', '/');
         appState.currentView = 'home';
         appState.currentSeriesId = null;
-        appState.currentVolumeId = null;
-        appState.currentChapterIndex = 0;
-        appState.currentVolumeChapters = [];
-        appState.currentVolumeData = null;
-
         uiService.removeTocSidebar();
         app.applyLayoutClasses();
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
-        if (!seriesIndex) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat daftar seri. Silakan coba lagi nanti.</div>`;
-            return;
-        }
+        if (!seriesIndex) return;
 
-        history.pushState({ view: 'home' }, '', '/');
-        uiService.renderHomepageContent(seriesIndex);
+        let html = '<h2 class="text-2xl font-semibold mb-8">Light Novel Terbaru</h2><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">';
+        for (let s of seriesIndex) {
+            html += `<article class="cursor-pointer hover:opacity-80" onclick="navigationService.showSeriesDetail('${s.id}')">
+                <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
+                    ${s.cover ? `<img src="${s.cover}" class="w-full h-full object-cover">` : '<div class="text-gray-500">No Cover</div>'}
+                    ${s.format ? `<span class="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">${s.format}</span>` : ''}
+                </div>
+                <h3 class="text-sm font-medium line-clamp-2">${s.judul}</h3>
+            </article>`;
+        }
+        html += '</div>';
+
+        uiService.renderContent(html);
     },
 
     async showSeriesDetail(seriesId) {
-        appState.currentView = 'series-detail';
+        history.pushState(null, '', `/series/${seriesId}`);
         appState.currentSeriesId = seriesId;
-        appState.currentVolumeId = null;
-        appState.currentChapterIndex = 0;
-        appState.currentVolumeChapters = [];
-        appState.currentVolumeData = null;
-
+        appState.currentView = 'series-detail';
         uiService.removeTocSidebar();
         app.applyLayoutClasses();
 
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
+        if (!info || !volumes) return;
 
-        if (!info || !volumes) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat detail seri. Silakan coba lagi nanti.</div>`;
-            return;
+        let html = `<div class="mb-6">
+            <h1 class="text-3xl font-bold mb-4">${info.judul}</h1>
+            <div class="mb-4 text-gray-600">${info.penulis} • ${info.rilis} • ${info.genre} • ${info.status}</div>
+            <p class="mb-4">${info.deskripsi}</p>
+            <h3 class="text-xl font-semibold mb-2">Volume</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">`;
+
+        for (let v of volumes) {
+            html += `<div onclick="navigationService.showVolume('${seriesId}', '${v.id}')" class="cursor-pointer">
+                <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 overflow-hidden">
+                    ${v.cover ? `<img src="${v.cover}" class="w-full h-full object-cover">` : '<div class="text-center">No Cover</div>'}
+                </div>
+                <div class="text-xs text-center">${v.judul}</div>
+            </div>`;
         }
 
-        history.pushState({ view: 'series-detail', seriesId }, '', `/series/${seriesId}`);
-        uiService.renderSeriesDetailContent(info, volumes);
+        html += '</div></div>';
+
+        uiService.renderContent(html);
     },
 
     async showVolume(seriesId, volumeId) {
-        appState.currentView = 'volume-read';
+        history.pushState(null, '', `/series/${seriesId}/${volumeId}`);
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = volumeId;
-        appState.currentChapterIndex = 0;
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
-        if (!volumeData) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat data volume. Silakan coba lagi nanti.</div>`;
-            return;
-        }
+        if (!volumeData) return;
 
-        appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
+        appState.currentVolumeChapters = volumeData.bab;
 
         uiService.createTocSidebar(volumeData.bab);
 
-        if (!appState.isMobile) {
-            app.toggleTocSidebar(true);
-        } else {
-            app.toggleTocSidebar(false);
-        }
+        if (!appState.isMobile) app.toggleTocSidebar(true);
+        else app.toggleTocSidebar(false);
 
-        history.pushState({ view: 'volume-read', seriesId, volumeId, chapterIndex: 0 }, '', `/series/${seriesId}/${volumeId}`);
         navigationService.showChapter(seriesId, volumeId, 0);
     },
 
     async showChapter(seriesId, volumeId, chapterIndex) {
+        history.pushState(null, '', `/series/${seriesId}/${volumeId}/${chapterIndex + 1}`);
         appState.currentChapterIndex = chapterIndex;
+
         const chapterInfo = appState.currentVolumeChapters[chapterIndex];
-        const volumeData = appState.currentVolumeData;
-
-        if (!chapterInfo || !volumeData) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab atau data volume tidak ditemukan.</div>`;
-            return;
-        }
-
-        uiService.createTocSidebar(appState.currentVolumeChapters);
-
-        if (!appState.isMobile) {
-            app.toggleTocSidebar(true);
-        } else {
-            app.toggleTocSidebar(false);
-        }
-
-        app.applyLayoutClasses();
+        if (!chapterInfo) return;
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
-        if (!chapterData) {
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Gagal memuat bab. Silakan coba lagi nanti.</div>`;
-            return;
-        }
+        if (!chapterData) return;
 
-        history.pushState({ view: 'volume-read', seriesId, volumeId, chapterIndex }, '', `/series/${seriesId}/${volumeId}/${chapterIndex + 1}`);
-        uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
-
-        DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-
-    async handlePopstate(event) {
-        const state = event.state || {};
-        if (state.view === 'home') {
-            await navigationService.renderHomepage();
-        } else if (state.view === 'series-detail' && state.seriesId) {
-            await navigationService.showSeriesDetail(state.seriesId);
-        } else if (state.view === 'volume-read' && state.seriesId && state.volumeId) {
-            appState.currentSeriesId = state.seriesId;
-            appState.currentVolumeId = state.volumeId;
-            await navigationService.showVolume(state.seriesId, state.volumeId);
-            if (state.chapterIndex !== undefined) {
-                await navigationService.showChapter(state.seriesId, state.volumeId, state.chapterIndex);
+        let html = `<h2 class="text-2xl font-bold mb-4">${chapterData.judul}</h2>`;
+        for (let item of chapterData.konten) {
+            if (item.paragraf) {
+                html += `<p class="mb-4">${item.paragraf}</p>`;
+            } else if (item.gambar) {
+                html += `<div class="my-6 text-center">
+                    <img src="${dataService.getChapterImagePath(seriesId, volumeId, item.gambar)}" class="mx-auto max-w-full">
+                </div>`;
+            } else if (item.kutipan) {
+                html += `<blockquote class="italic text-gray-700 border-l-4 border-gray-300 pl-4 py-2 mb-4">"${item.kutipan}"</blockquote>`;
+            } else if (item.dialog) {
+                html += `<div class="bg-gray-50 p-4 rounded mb-4">`;
+                for (let d of item.dialog) {
+                    html += `<p><strong>${d.karakter}:</strong> ${d.ucapan}</p>`;
+                }
+                html += '</div>';
             }
-        } else {
-            await navigationService.renderHomepage();
         }
+
+        uiService.renderContent(html);
     }
 };
 
@@ -440,7 +244,6 @@ const app = {
             DOMElements.mainContent.style.marginLeft = '0';
             DOMElements.mainAppHeader.style.left = '0';
             DOMElements.sidebarToggle.style.display = 'block';
-
             if (DOMElements.tocSidebar) {
                 if (appState.isTocSidebarOpen) {
                     DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
@@ -456,7 +259,6 @@ const app = {
             DOMElements.mainContent.classList.remove('main-mobile-full');
             DOMElements.overlay.classList.add('hidden');
             DOMElements.sidebarToggle.style.display = 'none';
-
             if (DOMElements.tocSidebar) {
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
                 DOMElements.mainContent.style.marginLeft = '256px';
@@ -470,21 +272,10 @@ const app = {
         }
     },
 
-    checkMobile() {
-        const wasMobile = appState.isMobile;
-        appState.isMobile = window.innerWidth < 768;
-
-        if (wasMobile !== appState.isMobile) {
-            app.applyLayoutClasses();
-        }
-    },
-
     toggleTocSidebar(forceState = null) {
         if (!DOMElements.tocSidebar) return;
-
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
         appState.isTocSidebarOpen = newState;
-
         if (appState.isMobile) {
             if (newState) {
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
@@ -499,54 +290,45 @@ const app = {
         }
     },
 
+    checkMobile() {
+        const wasMobile = appState.isMobile;
+        appState.isMobile = window.innerWidth < 768;
+        if (wasMobile !== appState.isMobile) app.applyLayoutClasses();
+    },
+
+    handleRouting(path) {
+        const segments = path.split('/').filter(Boolean);
+        if (segments.length === 0) {
+            navigationService.renderHomepage();
+        } else if (segments[0] === 'series') {
+            const seriesId = segments[1];
+            if (segments.length === 2) {
+                navigationService.showSeriesDetail(seriesId);
+            } else if (segments.length === 3) {
+                navigationService.showVolume(seriesId, segments[2]);
+            } else if (segments.length === 4) {
+                const chapterIndex = parseInt(segments[3], 10) - 1;
+                navigationService.showVolume(seriesId, segments[2]).then(() => {
+                    navigationService.showChapter(seriesId, segments[2], chapterIndex);
+                });
+            } else {
+                navigationService.renderHomepage();
+            }
+        } else {
+            navigationService.renderHomepage();
+        }
+    },
+
     setupEventListeners() {
         DOMElements.sidebarToggle.addEventListener('click', () => app.toggleTocSidebar());
-
-        DOMElements.overlay.addEventListener('click', function() {
-            if (appState.isMobile) {
-                app.toggleTocSidebar(false);
-            }
-        });
-
+        DOMElements.overlay.addEventListener('click', () => app.toggleTocSidebar(false));
         window.addEventListener('resize', debounce(app.checkMobile, 200));
-
-        window.addEventListener('popstate', navigationService.handlePopstate);
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                if (appState.isMobile && appState.isTocSidebarOpen) {
-                    app.toggleTocSidebar(false);
-                }
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', async function() {
+        window.addEventListener('popstate', () => app.handleRouting(location.pathname));
+        document.addEventListener('DOMContentLoaded', () => {
             app.checkMobile();
-            const path = window.location.pathname;
-            if (path === '/' || path === '') {
-                await navigationService.renderHomepage();
-            } else {
-                const match = path.match(/^\/series\/([^/]+)(?:\/([^/]+)(?:\/(\d+))?)?$/);
-                if (match) {
-                    const [, seriesId, volumeId, chapterIndex] = match;
-                    if (volumeId && chapterIndex) {
-                        appState.currentSeriesId = seriesId;
-                        appState.currentVolumeId = volumeId;
-                        await navigationService.showVolume(seriesId, volumeId);
-                        await navigationService.showChapter(seriesId, volumeId, parseInt(chapterIndex) - 1);
-                    } else if (volumeId) {
-                        appState.currentSeriesId = seriesId;
-                        appState.currentVolumeId = volumeId;
-                        await navigationService.showVolume(seriesId, volumeId);
-                    } else {
-                        await navigationService.showSeriesDetail(seriesId);
-                    }
-                } else {
-                    await navigationService.renderHomepage();
-                }
-            }
+            app.handleRouting(location.pathname);
         });
-    }
+    },
 };
 
 app.setupEventListeners();
