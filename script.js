@@ -63,12 +63,11 @@ const dataService = {
             if (!response.ok) {
                 throw new Error(`Failed to load ${path}: ${response.statusText}`);
             }
-            const data = await response.json(); // Mengembalikan ke logika kode lama
+            const data = await response.json();
             this.setCache(cacheKey, data);
             return data;
         } catch (error) {
             console.error('Error fetching JSON:', error);
-            // Mengembalikan pesan error ke versi kode lama
             DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
             return null;
         }
@@ -82,20 +81,20 @@ const dataService = {
 const uiService = {
     async renderContentWithTransition(contentHtml) {
         DOMElements.dynamicContent.classList.add('fade-out');
-        await new Promise(resolve => setTimeout(resolve, 350)); // Tetap 350ms untuk transisi visual
+        await new Promise(resolve => setTimeout(resolve, 300));
         DOMElements.dynamicContent.innerHTML = contentHtml;
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
     createTocSidebar(chapters) {
         if (DOMElements.tocSidebar) {
-            DOMElements.tocSidebar.remove();
+            DOMElements.tocSidebar.remove(); // Remove existing if any
             DOMElements.tocSidebar = null;
         }
 
         const tocSidebarElement = document.createElement('aside');
         tocSidebarElement.id = 'tocSidebar';
-        tocSidebarElement.classList.add('app-sidebar');
+        tocSidebarElement.classList.add('app-sidebar'); // Use a common class for styling
 
         let chaptersHtml = ``;
         chapters.forEach((chapter, index) => {
@@ -119,13 +118,6 @@ const uiService = {
             </header>
             <nav class="toc-nav">
                 <ul class="space-y-2">
-                    <li class="toc-menu-item">
-                        <a href="#" onclick="navigationService.showSeriesDetail('${appState.currentSeriesId}'); return false;" class="flex items-center">
-                            <span class="material-icons mr-2">arrow_back</span>
-                            Kembali ke Seri
-                        </a>
-                    </li>
-                    <li class="border-t border-gray-200 my-2"></li>
                     ${chaptersHtml}
                 </ul>
             </nav>
@@ -134,11 +126,13 @@ const uiService = {
         document.body.appendChild(tocSidebarElement);
         DOMElements.tocSidebar = tocSidebarElement;
 
+        // Attach event listener for close button
         const closeButton = document.getElementById('closeTocSidebar');
         if (closeButton) {
             closeButton.addEventListener('click', () => app.toggleTocSidebar(false));
         }
 
+        // Ensure it's hidden on mobile initially if not explicitly opened
         if (appState.isMobile) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
         }
@@ -148,7 +142,7 @@ const uiService = {
         if (DOMElements.tocSidebar) {
             DOMElements.tocSidebar.remove();
             DOMElements.tocSidebar = null;
-            appState.isTocSidebarOpen = false;
+            appState.isTocSidebarOpen = false; // Reset state
         }
     },
 
@@ -185,7 +179,7 @@ const uiService = {
                 ${seriesHtml}
             </div>
         `;
-        await uiService.renderContentWithTransition(contentHtml);
+        uiService.renderContentWithTransition(contentHtml);
     },
 
     async renderSeriesDetailContent(info, volumes) {
@@ -250,7 +244,7 @@ const uiService = {
                 </div>
             </div>
         `;
-        await uiService.renderContentWithTransition(contentHtml);
+        uiService.renderContentWithTransition(contentHtml);
     },
 
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
@@ -303,118 +297,25 @@ const uiService = {
                 </div>
             </div>
         `;
-        await uiService.renderContentWithTransition(contentHtml);
+        uiService.renderContentWithTransition(contentHtml);
     }
 };
 
 const navigationService = {
-    // Helper function to update URL and history
-    updateUrlAndHistory(view, seriesId = null, volumeId = null, chapterIndex = null) {
-        let path = '/';
-        let state = { view: view, seriesId: seriesId, volumeId: volumeId, chapterIndex: chapterIndex };
-
-        switch (view) {
-            case 'home':
-                path = '/';
-                break;
-            case 'series-detail':
-                path = `/series/${seriesId}`;
-                break;
-            case 'volume-read':
-                path = `/series/${seriesId}/volume/${volumeId}`;
-                break;
-            case 'chapter-read': // Changed view name for chapter
-                path = `/series/${seriesId}/volume/${volumeId}/chapter/${chapterIndex}`;
-                break;
-        }
-        history.pushState(state, '', path);
-    },
-
-    // Function to handle initial page load or popstate event
-    async handleNavigation(state) {
-        let view = state ? state.view : null;
-        let seriesId = state ? state.seriesId : null;
-        let volumeId = state ? state.volumeId : null;
-        let chapterIndex = state ? state.chapterIndex : null;
-
-        // If state is null (e.g., initial load or direct URL access), parse URL
-        if (!state) {
-            const pathSegments = window.location.pathname.split('/').filter(segment => segment !== '');
-            if (pathSegments.length === 0) {
-                view = 'home';
-            } else if (pathSegments[0] === 'series' && pathSegments[1]) {
-                seriesId = pathSegments[1];
-                if (pathSegments[2] === 'volume' && pathSegments[3]) {
-                    volumeId = pathSegments[3];
-                    if (pathSegments[4] === 'chapter' && pathSegments[5]) {
-                        chapterIndex = parseInt(pathSegments[5]);
-                        view = 'chapter-read';
-                    } else {
-                        view = 'volume-read';
-                    }
-                } else {
-                    view = 'series-detail';
-                }
-            }
-        }
-
-        // Update appState based on parsed URL or history state
-        appState.currentView = view;
-        appState.currentSeriesId = seriesId;
-        appState.currentVolumeId = volumeId;
-        appState.currentChapterIndex = chapterIndex;
-
-        // Render content based on the determined view
-        switch (appState.currentView) {
-            case 'home':
-                await navigationService.renderHomepage();
-                break;
-            case 'series-detail':
-                await navigationService.showSeriesDetail(appState.currentSeriesId);
-                break;
-            case 'volume-read':
-                await navigationService.showVolume(appState.currentSeriesId, appState.currentVolumeId);
-                break;
-            case 'chapter-read':
-                // For chapter-read, we need to ensure volume data is loaded first
-                // This is a simplified approach; a more robust solution might involve
-                // re-fetching volume data if not in appState.currentVolumeData
-                if (!appState.currentVolumeData || appState.currentVolumeData.id !== appState.currentVolumeId) {
-                    const volumeData = await dataService.fetchJson(`series/${appState.currentSeriesId}/${appState.currentVolumeId}/${appState.currentVolumeId}.json`);
-                    if (volumeData) {
-                        appState.currentVolumeChapters = volumeData.bab;
-                        appState.currentVolumeData = volumeData;
-                    } else {
-                        console.error("Failed to load volume data for chapter navigation.");
-                        // Attempt to navigate to series detail if volume data is missing
-                        await navigationService.showSeriesDetail(appState.currentSeriesId);
-                        return;
-                    }
-                }
-                await navigationService.showChapter(appState.currentSeriesId, appState.currentVolumeId, appState.currentChapterIndex);
-                break;
-            default:
-                // Fallback to homepage if URL is unrecognized
-                await navigationService.renderHomepage();
-                break;
-        }
-    },
-
     async renderHomepage() {
         appState.currentView = 'home';
         appState.currentSeriesId = null;
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        uiService.removeTocSidebar();
-        app.applyLayoutClasses();
+        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
+        app.applyLayoutClasses(); // Sesuaikan layout untuk homepage
 
         const seriesIndex = await dataService.fetchJson('series/series-index.json');
         if (!seriesIndex) return;
 
-        await uiService.renderHomepageContent(seriesIndex);
-        // Update URL after rendering content
-        navigationService.updateUrlAndHistory('home');
+        history.pushState({ view: 'home' }, '', '/');
+        uiService.renderHomepageContent(seriesIndex);
     },
 
     async showSeriesDetail(seriesId) {
@@ -423,39 +324,31 @@ const navigationService = {
         appState.currentVolumeId = null;
         appState.currentChapterIndex = 0;
 
-        uiService.removeTocSidebar();
-        app.applyLayoutClasses();
+        uiService.removeTocSidebar(); // Pastikan TOC sidebar dihapus
+        app.applyLayoutClasses(); // Sesuaikan layout untuk detail seri
 
         const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
         const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
 
         if (!info || !volumes) return;
 
-        await uiService.renderSeriesDetailContent(info, volumes);
-        // Update URL after rendering content
-        navigationService.updateUrlAndHistory('series-detail', seriesId);
+        history.pushState({ view: 'series-detail', seriesId }, '', `/series/${seriesId}`);
+        uiService.renderSeriesDetailContent(info, volumes);
     },
 
     async showVolume(seriesId, volumeId) {
-        appState.currentView = 'volume-read'; // Set view state for volume
+        appState.currentView = 'volume-read';
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = volumeId;
-        appState.currentChapterIndex = 0; // Reset chapter index for new volume
-
-        // Perbarui URL ke level volume terlebih dahulu
-        navigationService.updateUrlAndHistory('volume-read', seriesId, volumeId);
+        appState.currentChapterIndex = 0;
 
         const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
-        if (!volumeData) {
-            // Jika data volume tidak ditemukan, kembali ke detail seri
-            await navigationService.showSeriesDetail(seriesId);
-            return;
-        }
+        if (!volumeData) return;
 
         appState.currentVolumeChapters = volumeData.bab;
         appState.currentVolumeData = volumeData;
 
-        uiService.createTocSidebar(volumeData.bab);
+        uiService.createTocSidebar(volumeData.bab); // Buat dan isi TOC sidebar
 
         // Hanya toggle sidebar terbuka jika di desktop
         if (!appState.isMobile) {
@@ -465,8 +358,8 @@ const navigationService = {
             app.toggleTocSidebar(false);
         }
 
-        // Sekarang, navigasi ke bab pertama. showChapter akan memperbarui URL ke chapter-read.
-        await navigationService.showChapter(seriesId, volumeId, 0);
+        history.pushState({ view: 'volume-read', seriesId, volumeId, chapterIndex: 0 }, '', `/series/${seriesId}/${volumeId}`);
+        navigationService.showChapter(seriesId, volumeId, 0);
     },
 
     async showChapter(seriesId, volumeId, chapterIndex) {
@@ -479,7 +372,7 @@ const navigationService = {
             return;
         }
 
-        uiService.createTocSidebar(appState.currentVolumeChapters);
+        uiService.createTocSidebar(appState.currentVolumeChapters); // Buat/perbarui TOC sidebar dengan bab aktif
 
         // Hanya toggle sidebar terbuka jika di desktop
         if (!appState.isMobile) {
@@ -489,33 +382,48 @@ const navigationService = {
             app.toggleTocSidebar(false);
         }
 
-        app.applyLayoutClasses();
+        app.applyLayoutClasses(); // Sesuaikan layout untuk tampilan bab
 
         const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
-        if (!chapterData) {
-            // Jika data bab tidak ditemukan, kembali ke detail volume (atau seri jika volume juga gagal)
-            await navigationService.showVolume(seriesId, volumeId); // Coba kembali ke volume
-            return;
-        }
+        if (!chapterData) return;
 
-        await uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
-        // Update URL after rendering content
-        navigationService.updateUrlAndHistory('chapter-read', seriesId, volumeId, chapterIndex);
+        history.pushState({ view: 'volume-read', seriesId, volumeId, chapterIndex }, '', `/series/${seriesId}/${volumeId}/${chapterIndex + 1}`);
+        uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
 
         // Scroll to top after rendering chapter content
         DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    handlePopstate(event) {
+        const state = event.state || {};
+        if (state.view === 'home') {
+            navigationService.renderHomepage();
+        } else if (state.view === 'series-detail') {
+            navigationService.showSeriesDetail(state.seriesId);
+        } else if (state.view === 'volume-read') {
+            if (state.chapterIndex !== undefined) {
+                appState.currentSeriesId = state.seriesId;
+                appState.currentVolumeId = state.volumeId;
+                navigationService.showVolume(state.seriesId, state.volumeId).then(() => {
+                    navigationService.showChapter(state.seriesId, state.volumeId, state.chapterIndex);
+                });
+            }
+        }
     }
 };
 
 const app = {
     applyLayoutClasses() {
         if (appState.isMobile) {
+            // Mobile: Konten utama penuh
             DOMElements.mainContent.classList.add('main-mobile-full');
-            DOMElements.mainContent.classList.remove('ml-desktop-toc-open');
-            DOMElements.mainAppHeader.classList.remove('header-desktop-toc-open');
+            DOMElements.mainContent.style.marginLeft = '0'; // Pastikan margin kiri 0 di mobile
+            DOMElements.mainAppHeader.style.left = '0'; // Header selalu di kiri di mobile
             
+            // Atur visibilitas tombol toggle di header utama
             DOMElements.sidebarToggle.style.display = 'block';
 
+            // Atur sidebar TOC (jika ada)
             if (DOMElements.tocSidebar) {
                 if (appState.isTocSidebarOpen) {
                     DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
@@ -525,24 +433,28 @@ const app = {
                     DOMElements.overlay.classList.add('hidden');
                 }
             } else {
-                DOMElements.overlay.classList.add('hidden');
+                DOMElements.overlay.classList.add('hidden'); // Sembunyikan overlay jika tidak ada sidebar TOC
             }
 
         } else {
+            // Desktop: Konten utama menyesuaikan dengan sidebar TOC (jika ada)
             DOMElements.mainContent.classList.remove('main-mobile-full');
-            DOMElements.overlay.classList.add('hidden');
+            DOMElements.overlay.classList.add('hidden'); // Overlay selalu tersembunyi di desktop
 
+            // Sembunyikan tombol toggle di desktop
             DOMElements.sidebarToggle.style.display = 'none';
 
             if (DOMElements.tocSidebar) {
+                // Jika sidebar TOC ada, pastikan terlihat dan sesuaikan margin konten utama
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-                DOMElements.mainContent.classList.add('ml-desktop-toc-open');
-                DOMElements.mainAppHeader.classList.add('header-desktop-toc-open');
-                document.body.classList.add('toc-active');
+                DOMElements.mainContent.style.marginLeft = '256px'; // Lebar sidebar TOC
+                DOMElements.mainAppHeader.style.left = '256px'; // Header utama bergeser
+                document.body.classList.add('toc-active'); // Tambahkan kelas ke body untuk CSS
             } else {
-                DOMElements.mainContent.classList.remove('ml-desktop-toc-open');
-                DOMElements.mainAppHeader.classList.remove('header-desktop-toc-open');
-                document.body.classList.remove('toc-active');
+                // Jika tidak ada sidebar TOC, konten utama penuh
+                DOMElements.mainContent.style.marginLeft = '0';
+                DOMElements.mainAppHeader.style.left = '0'; // Header utama di kiri
+                document.body.classList.remove('toc-active'); // Hapus kelas dari body
             }
         }
     },
@@ -557,6 +469,7 @@ const app = {
     },
 
     toggleTocSidebar(forceState = null) {
+        // Hanya beroperasi jika sidebar TOC sudah ada
         if (!DOMElements.tocSidebar) return;
 
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
@@ -571,6 +484,7 @@ const app = {
                 DOMElements.overlay.classList.add('hidden');
             }
         } else {
+            // Di desktop, sidebar TOC selalu terlihat jika ada
             DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
             DOMElements.overlay.classList.add('hidden');
         }
@@ -581,16 +495,13 @@ const app = {
 
         DOMElements.overlay.addEventListener('click', function() {
             if (appState.isMobile) {
-                app.toggleTocSidebar(false);
+                app.toggleTocSidebar(false); // Tutup sidebar TOC saat overlay diklik di mobile
             }
         });
 
         window.addEventListener('resize', debounce(app.checkMobile, 200));
 
-        // Listen for browser's back/forward button clicks
-        window.onpopstate = function(event) {
-            navigationService.handleNavigation(event.state);
-        };
+        window.addEventListener('popstate', navigationService.handlePopstate);
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
@@ -602,8 +513,27 @@ const app = {
 
         document.addEventListener('DOMContentLoaded', function() {
             app.checkMobile();
-            // Initial load handling using handleNavigation
-            navigationService.handleNavigation(history.state);
+            // Initialize based on current URL
+            const path = window.location.pathname;
+            if (path === '/' || path === '') {
+                navigationService.renderHomepage();
+            } else {
+                const match = path.match(/^\/series\/([^/]+)(?:\/([^/]+)(?:\/(\d+))?)?$/);
+                if (match) {
+                    const [, seriesId, volumeId, chapterIndex] = match;
+                    if (volumeId && chapterIndex) {
+                        navigationService.showVolume(seriesId, volumeId).then(() => {
+                            navigationService.showChapter(seriesId, volumeId, parseInt(chapterIndex) - 1);
+                        });
+                    } else if (volumeId) {
+                        navigationService.showVolume(seriesId, volumeId);
+                    } else {
+                        navigationService.showSeriesDetail(seriesId);
+                    }
+                } else {
+                    navigationService.renderHomepage();
+                }
+            }
         });
     }
 };
