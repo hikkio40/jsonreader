@@ -249,13 +249,13 @@ const uiService = {
         });
 
         const contentHtml = `
-            <div class="mb-6">
+            <div class="mb-6 series-detail-back-button-container">
                 <button onclick="navigationService.renderHomepage()" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-homepage-button">
                     <span class="material-icons mr-2">arrow_back</span>
                     Kembali ke Beranda
                 </button>
             </div>
-            <div class="series-detail-container">
+            <div class="series-detail-view-container">
                 <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
                     <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
@@ -268,27 +268,27 @@ const uiService = {
                     <div class="flex-1 series-info-section">
                         <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-600 mb-4 series-metadata">
-                            <div class="flex items-center series-author">
+                            <div class="flex items-center series-author-info">
                                 <span class="material-icons text-sm mr-1 align-middle">person</span>
                                 ${info.penulis}
                             </div>
-                            <div class="flex items-center series-release-date">
+                            <div class="flex items-center series-release-date-info">
                                 <span class="material-icons text-sm mr-1 align-middle">calendar_today</span>
                                 ${info.rilis}
                             </div>
-                            <div class="flex items-center series-genre">
+                            <div class="flex items-center series-genre-info">
                                 <span class="material-icons text-sm mr-1">label</span>
                                 ${info.genre}
                             </div>
-                            <div class="flex items-center series-status">
+                            <div class="flex items-center series-status-info">
                                 <span class="material-icons text-sm mr-1">info</span>
                                 ${info.status}
                             </div>
                         </div>
                         
-                        <div class="series-synopsis">
+                        <div class="series-synopsis-section">
                             <h3 class="text-xl font-semibold mb-3">Sinopsis</h3>
-                            <p class="mb-4">${info.deskripsi}</p>
+                            <p class="mb-4 series-synopsis-text">${info.deskripsi}</p>
                         </div>
                     </div>
                 </div>
@@ -343,18 +343,18 @@ const uiService = {
             </button>` : '';
         
         const contentHtml = `
-            <div class="chapter-navigation-top">
+            <div class="chapter-navigation-top-controls">
                 <button onclick="navigationService.showVolume('${appState.currentSeriesId}', '${appState.currentVolumeId}')" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-volume-button">
                     <span class="material-icons mr-2">arrow_back</span>
                     Kembali ke Volume
                 </button>
             </div>
             
-            <div class="chapter-content-wrapper">
+            <div class="chapter-content-display">
                 <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
                 ${chapterContentHtml}
                 
-                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
+                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom-controls">
                     <div>${prevButton}</div>
                     <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
                     <div>${nextButton}</div>
