@@ -1,6 +1,11 @@
 {
   "bab": [
     {
+      "id": "illustration",
+      "judul": "Illustration",
+      "file": "illustration.json" 
+    },
+    {
       "id": "prologue",
       "judul": "Prologue",
       "file": "prologue.json" 
