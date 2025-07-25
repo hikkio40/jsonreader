@@ -217,7 +217,6 @@ const uiService = {
 
             // Menghapus tombol "Kembali ke Seri" dari sidebar
             sidebarContentHtml = `
-                <li class="border-t border-gray-200 my-2"></li>
                 ${chaptersHtml}
             `;
         } else { // 'home' or 'series-detail' view
