@@ -12,8 +12,13 @@ const DOMElements = {
 
 // Pola Regex untuk URL navigasi yang diperbarui
 const URL_REGEX = {
+    // Mengubah pola agar tidak menyertakan '/series' di awal
     SERIES_DETAIL: /^\/([a-zA-Z0-9_-]+)$/,
+    // Mengubah pola agar tidak menyertakan '/volume/' literal di tengah
+    // Sekarang cocok dengan /seriesId/volumeId (contoh: /thegirlwhowantstobeahero/1)
     VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)$/, 
+    // Mengubah pola agar tidak menyertakan '/volume/' literal dan '/chapter/' di tengah
+    // Sekarang cocok dengan /seriesId/volumeId/chapterIndex (contoh: /thegirlwhowantstobeahero/1/0)
     CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/(\d+)$/, 
 };
 
@@ -535,8 +540,8 @@ const navigationService = {
             // Ketika URL hanya sampai volume, kita navigasi ke bab 0 dan perbarui URL
             this._updateAppState('volume-read', seriesId, volumeId, 0); // Default ke bab 0
             // Memperbarui URL di history tanpa menambah entri history baru
-            // URL sekarang akan menjadi /seriesId/volumeId/chapter/0
-            history.replaceState(null, '', `/${seriesId}/${volumeId}/chapter/0`);
+            // URL sekarang akan menjadi /seriesId/volumeId/0
+            history.replaceState(null, '', `/${seriesId}/${volumeId}/0`);
 
             // Jalur fetch data JSON tetap menggunakan '/series/'
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
@@ -606,8 +611,8 @@ const navigationService = {
      */
     goToVolume(seriesId, volumeId) {
         // Langsung navigasi ke bab 0 dari volume tersebut dan perbarui URL
-        // Menghilangkan literal '/volume/' dari URL yang ditampilkan
-        history.pushState(null, '', `/${seriesId}/${volumeId}/chapter/0`);
+        // URL sekarang akan menjadi /seriesId/volumeId/0
+        history.pushState(null, '', `/${seriesId}/${volumeId}/0`);
         this.loadContentFromUrl();
     },
 
@@ -619,8 +624,8 @@ const navigationService = {
      */
     goToChapter(seriesId, volumeId, chapterIndex) {
         // Memperbarui URL di history
-        // Menghilangkan literal '/volume/' dari URL yang ditampilkan
-        history.pushState(null, '', `/${seriesId}/${volumeId}/chapter/${chapterIndex}`);
+        // URL sekarang akan menjadi /seriesId/volumeId/chapterIndex
+        history.pushState(null, '', `/${seriesId}/${volumeId}/${chapterIndex}`);
         this.loadContentFromUrl();
     }
 };
