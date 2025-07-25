@@ -462,27 +462,21 @@ const uiService = {
 // LAYANAN NAVIGASI (MANAJEMEN URL & STATE)
 const navigationService = {
     /**
-     * Memperbarui appState dan menerapkan layout berdasarkan perubahan navigasi.
+     * Memperbarui appState berdasarkan perubahan navigasi.
      * @param {string} view Nama tampilan baru ('home', 'series-detail', 'volume-read').
      * @param {string|null} seriesId ID seri (opsional).
      * @param {string|null} volumeId ID volume (opsional).
      * @param {number|null} chapterIndex Indeks bab (opsional).
      */
-    _updateAppStateAndLayout(view, seriesId = null, volumeId = null, chapterIndex = 0) {
-        console.log("Entering _updateAppStateAndLayout. Proposed view:", view, "isMobile:", appState.isMobile);
+    _updateAppState(view, seriesId = null, volumeId = null, chapterIndex = 0) { // Nama fungsi diubah
+        console.log("Entering _updateAppState. Proposed view:", view, "isMobile:", appState.isMobile);
         appState.currentView = view;
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = volumeId;
         appState.currentChapterIndex = chapterIndex;
-
-        // Tentukan apakah sidebar TOC harus terbuka
-        appState.isTocSidebarOpen = (appState.currentView === 'volume-read' && !appState.isMobile);
-        
-        // uiService.renderDynamicSidebarContent(); // Pindahkan panggilan ini
-        
-        // Terapkan semua kelas layout berdasarkan appState yang baru
-        app.applyLayoutClasses();
-        console.log("Exiting _updateAppStateAndLayout. Current appState:", appState);
+        // appState.isTocSidebarOpen tidak diatur di sini lagi
+        // app.applyLayoutClasses() tidak dipanggil di sini lagi
+        console.log("Exiting _updateAppState. Current appState:", appState);
     },
 
     /**
@@ -495,28 +489,33 @@ const navigationService = {
         let match;
 
         if (path === '/' || path === '/index.html') {
-            this._updateAppStateAndLayout('home');
+            this._updateAppState('home');
             const seriesIndex = await dataService.fetchJson('/series/series-index.json');
             if (seriesIndex) uiService.renderHomepageContent(seriesIndex);
+            app.toggleTocSidebar(false); // Pastikan TOC tertutup di halaman beranda
         } else if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
             const seriesId = match[1];
             const volumeId = match[2];
             const chapterIndex = parseInt(match[3], 10);
             
-            this._updateAppStateAndLayout('volume-read', seriesId, volumeId, chapterIndex);
+            this._updateAppState('volume-read', seriesId, volumeId, chapterIndex);
 
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
-            if (!volumeData) return;
+            if (!volumeData) {
+                app.toggleTocSidebar(false); // Sembunyikan TOC jika data volume gagal dimuat
+                return;
+            }
 
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
             
-            // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
-            uiService.renderDynamicSidebarContent(); // Pindahkan ke sini
+            // Panggil toggleTocSidebar di sini setelah appState.currentVolumeChapters diisi
+            app.toggleTocSidebar(true); // Pastikan TOC terbuka untuk tampilan baca
             
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
             if (!chapterInfo) {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab tidak ditemukan.</div>`;
+                app.toggleTocSidebar(false); // Sembunyikan TOC jika bab tidak ditemukan
                 return;
             }
             const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`);
@@ -527,17 +526,20 @@ const navigationService = {
             const volumeId = match[2];
 
             // Ketika URL hanya sampai volume, kita navigasi ke bab 0 dan perbarui URL
-            this._updateAppStateAndLayout('volume-read', seriesId, volumeId, 0); // Default ke bab 0
+            this._updateAppState('volume-read', seriesId, volumeId, 0); // Default ke bab 0
             history.replaceState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/0`); // Perbarui URL tanpa menambah entri history
 
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
-            if (!volumeData) return;
+            if (!volumeData) {
+                app.toggleTocSidebar(false); // Sembunyikan TOC jika data volume gagal dimuat
+                return;
+            }
 
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
 
-            // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
-            uiService.renderDynamicSidebarContent(); // Pindahkan ke sini
+            // Panggil toggleTocSidebar di sini setelah appState.currentVolumeChapters diisi
+            app.toggleTocSidebar(true); // Pastikan TOC terbuka untuk tampilan baca
 
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 const firstChapterInfo = appState.currentVolumeChapters[0];
@@ -545,14 +547,16 @@ const navigationService = {
                 if (chapterData) uiService.renderChapterContent(chapterData, volumeData, 0, appState.currentVolumeChapters.length);
             } else {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-gray-500">Tidak ada bab ditemukan untuk volume ini.</div>`;
+                app.toggleTocSidebar(false); // Sembunyikan TOC jika tidak ada bab
             }
 
         } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
             const seriesId = match[1];
-            this._updateAppStateAndLayout('series-detail', seriesId);
+            this._updateAppState('series-detail', seriesId);
             const info = await dataService.fetchJson(`/series/${seriesId}/info.json`);
             const volumes = await dataService.fetchJson(`/series/${seriesId}/volumes.json`);
             if (info && volumes) uiService.renderSeriesDetailContent(info, volumes);
+            app.toggleTocSidebar(false); // Pastikan TOC tertutup di halaman detail seri
         } else {
             console.warn("URL tidak dikenal, mengarahkan ke beranda:", path);
             this.goToHomepage(); // Gunakan goToHomepage untuk mendorong URL yang benar
@@ -653,6 +657,7 @@ const app = {
 
         if (wasMobile !== appState.isMobile) {
             app.applyLayoutClasses();
+            // Ketika status mobile berubah, pastikan sidebar tertutup jika sedang terbuka
             if (appState.isTocSidebarOpen) {
                 app.toggleTocSidebar(false);
             }
@@ -664,7 +669,6 @@ const app = {
      * @param {boolean|null} forceState Jika true/false, akan memaksa status sidebar.
      */
     toggleTocSidebar(forceState = null) {
-        // Fungsi ini sekarang hanya mengontrol appState.isTocSidebarOpen dan memicu applyLayoutClasses
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
         appState.isTocSidebarOpen = newState;
         
