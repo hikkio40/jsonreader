@@ -478,8 +478,7 @@ const navigationService = {
         // Tentukan apakah sidebar TOC harus terbuka
         appState.isTocSidebarOpen = (appState.currentView === 'volume-read' && !appState.isMobile);
         
-        // Pastikan elemen sidebar ada dan kontennya terbarui
-        uiService.renderDynamicSidebarContent(); 
+        // uiService.renderDynamicSidebarContent(); // Pindahkan panggilan ini
         
         // Terapkan semua kelas layout berdasarkan appState yang baru
         app.applyLayoutClasses();
@@ -512,6 +511,9 @@ const navigationService = {
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
             
+            // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
+            uiService.renderDynamicSidebarContent(); // Pindahkan ke sini
+            
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
             if (!chapterInfo) {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab tidak ditemukan.</div>`;
@@ -533,6 +535,9 @@ const navigationService = {
 
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
+
+            // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
+            uiService.renderDynamicSidebarContent(); // Pindahkan ke sini
 
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 const firstChapterInfo = appState.currentVolumeChapters[0];
