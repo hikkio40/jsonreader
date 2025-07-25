@@ -32,10 +32,10 @@ const appState = {
 // UTILITAS UMUM
 const debounce = (func, delay) => {
     let timeout;
-    return function(...args) {
+    return function(...args) { // Memperbaiki bug: menggunakan ...args
         const context = this;
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, delay), delay);
+        timeout = setTimeout(() => func.apply(context, args), delay); // Memperbaiki bug: menggunakan args
     };
 };
 
@@ -178,6 +178,7 @@ const uiService = {
      */
     renderDynamicSidebarContent() {
         if (!DOMElements.tocSidebar) {
+            console.log("Creating tocSidebar DOM element."); // Log tambahan
             const tocSidebarElement = document.createElement('aside');
             tocSidebarElement.id = 'tocSidebar';
             tocSidebarElement.classList.add('app-sidebar', 'toc-sidebar-hidden');
@@ -349,7 +350,7 @@ const uiService = {
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
                             ${info.cover ? `<img src="${dataService.getAbsoluteCoverPath(info.cover)}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>`}
+                        </svg>`}
                         </div>
                     </div>
                     
@@ -468,18 +469,21 @@ const navigationService = {
      * @param {number|null} chapterIndex Indeks bab (opsional).
      */
     _updateAppStateAndLayout(view, seriesId = null, volumeId = null, chapterIndex = 0) {
+        console.log("Entering _updateAppStateAndLayout. Proposed view:", view, "isMobile:", appState.isMobile);
         appState.currentView = view;
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = volumeId;
         appState.currentChapterIndex = chapterIndex;
 
-        // Kelola sidebar TOC berdasarkan tampilan dan status mobile/desktop
-        if (appState.currentView === 'volume-read' && !appState.isMobile) {
-            app.toggleTocSidebar(true); // Selalu buka TOC di desktop untuk tampilan baca
-        } else {
-            app.toggleTocSidebar(false); // Tutup TOC di tampilan lain atau di mobile
-        }
+        // Tentukan apakah sidebar TOC harus terbuka
+        appState.isTocSidebarOpen = (appState.currentView === 'volume-read' && !appState.isMobile);
+        
+        // Pastikan elemen sidebar ada dan kontennya terbarui
+        uiService.renderDynamicSidebarContent(); 
+        
+        // Terapkan semua kelas layout berdasarkan appState yang baru
         app.applyLayoutClasses();
+        console.log("Exiting _updateAppStateAndLayout. Current appState:", appState);
     },
 
     /**
@@ -596,10 +600,16 @@ const app = {
      * Menerapkan kelas layout berdasarkan status mobile/desktop dan sidebar.
      */
     applyLayoutClasses() {
+        console.log("applyLayoutClasses called. appState.isMobile:", appState.isMobile, "appState.currentView:", appState.currentView, "appState.isTocSidebarOpen:", appState.isTocSidebarOpen, "DOMElements.tocSidebar:", DOMElements.tocSidebar);
+
+        // Reset default styles/classes first to ensure clean state
+        DOMElements.mainContent.style.marginLeft = '0';
+        DOMElements.mainAppHeader.style.left = '0';
+        document.body.classList.remove('toc-active');
+        DOMElements.overlay.classList.add('hidden'); // Hide overlay by default
+
         if (appState.isMobile) {
             DOMElements.mainContent.classList.add('main-mobile-full');
-            DOMElements.mainContent.style.marginLeft = '0';
-            DOMElements.mainAppHeader.style.left = '0';
             DOMElements.sidebarToggle.style.display = 'block';
 
             if (DOMElements.tocSidebar) {
@@ -608,27 +618,23 @@ const app = {
                     DOMElements.overlay.classList.remove('hidden');
                 } else {
                     DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-                    DOMElements.overlay.classList.add('hidden');
                 }
-            } else {
-                DOMElements.overlay.classList.add('hidden');
             }
-
-        } else {
+        } else { // Desktop
             DOMElements.mainContent.classList.remove('main-mobile-full');
-            DOMElements.overlay.classList.add('hidden');
             DOMElements.sidebarToggle.style.display = 'none';
 
             if (appState.currentView === 'volume-read' && DOMElements.tocSidebar) {
+                console.log("Desktop: currentView is volume-read AND tocSidebar exists. Showing TOC.");
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
                 DOMElements.mainContent.style.marginLeft = '256px';
                 DOMElements.mainAppHeader.style.left = '256px';
                 document.body.classList.add('toc-active');
             } else {
-                DOMElements.mainContent.style.marginLeft = '0';
-                DOMElements.mainAppHeader.style.left = '0';
-                document.body.classList.remove('toc-active');
-                uiService.removeTocSidebar();
+                console.log("Desktop: Not volume-read or no TOC sidebar, hiding TOC.");
+                if (DOMElements.tocSidebar) { // Only hide if it exists
+                    DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+                }
             }
         }
     },
@@ -653,29 +659,12 @@ const app = {
      * @param {boolean|null} forceState Jika true/false, akan memaksa status sidebar.
      */
     toggleTocSidebar(forceState = null) {
-        uiService.renderDynamicSidebarContent();
-
-        if (!DOMElements.tocSidebar) return;
-
+        // Fungsi ini sekarang hanya mengontrol appState.isTocSidebarOpen dan memicu applyLayoutClasses
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
         appState.isTocSidebarOpen = newState;
-
-        if (appState.isMobile) {
-            if (newState) {
-                DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-                DOMElements.overlay.classList.remove('hidden');
-            } else {
-                DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-                DOMElements.overlay.classList.add('hidden');
-            }
-        } else {
-            if (appState.currentView === 'volume-read') {
-                DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-            } else {
-                DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-            }
-            DOMElements.overlay.classList.add('hidden');
-        }
+        
+        // Pastikan konten dirender/diperbarui sebelum menerapkan layout
+        uiService.renderDynamicSidebarContent(); 
         app.applyLayoutClasses();
     },
 
