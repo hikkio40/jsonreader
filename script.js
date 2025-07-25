@@ -300,10 +300,7 @@ const uiService = {
 
         const contentHtml = `
             <div class="mb-6">
-                <button onclick="navigationService.goToHomepage()" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-homepage-button">
-                    <span class="material-icons mr-2">arrow_back</span>
-                    Kembali ke Beranda
-                </button>
+                <!-- Tombol "Kembali ke Beranda" dihapus dari sini -->
             </div>
             <div class="series-detail-container">
                 <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
@@ -394,10 +391,7 @@ const uiService = {
         
         const contentHtml = `
             <div class="chapter-navigation-top">
-                <button onclick="navigationService.goToVolume('${appState.currentSeriesId}', '${appState.currentVolumeId}')" class="flex items-center text-gray-600 hover:text-black mb-4 back-to-volume-button">
-                    <span class="material-icons mr-2">arrow_back</span>
-                    Kembali ke Volume
-                </button>
+                <!-- Tombol "Kembali ke Volume" dihapus dari sini -->
             </div>
             
             <div class="chapter-content-wrapper">
