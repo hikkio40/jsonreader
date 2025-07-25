@@ -11,9 +11,19 @@
       "file": "prologue.json" 
     },
     {
-      "id": "bab1",
+      "id": "chapter1",
       "judul": "Chapter 1",
       "file": "chapter1.json"
+    },
+    {
+      "id": "chapter2",
+      "judul": "Chapter 2",
+      "file": "chapter2.json"
+    },
+    {
+      "id": "chapter3",
+      "judul": "Chapter 3",
+      "file": "chapter3.json"
     }
   ]
 }
