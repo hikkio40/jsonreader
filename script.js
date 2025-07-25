@@ -1,3 +1,4 @@
+// KONSTANTA DAN ELEMEN DOM
 const DOMElements = {
     sidebarToggle: document.getElementById('sidebarToggle'),
     mainAppHeader: document.getElementById('mainAppHeader'),
@@ -5,13 +6,21 @@ const DOMElements = {
     mainContent: document.getElementById('mainContent'),
     dynamicContent: document.getElementById('dynamicContent'),
     overlay: document.getElementById('overlay'),
-    tocSidebar: null, // Reference to the dynamically created TOC sidebar
-    headerMainNav: document.querySelector('.header-main-nav'), // Reference to the main nav in header
+    tocSidebar: null, // Referensi ke sidebar TOC yang dibuat secara dinamis
+    headerMainNav: document.querySelector('.header-main-nav'), // Referensi ke navigasi utama di header
 };
 
+// Pola Regex untuk URL navigasi
+const URL_REGEX = {
+    SERIES_DETAIL: /^\/series\/([a-zA-Z0-9_-]+)$/,
+    VOLUME_READ: /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)$/,
+    CHAPTER_READ: /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)\/chapter\/(\d+)$/,
+};
+
+// MANAJEMEN STATUS APLIKASI
 const appState = {
     isMobile: false,
-    isTocSidebarOpen: false, // Tracks if the single dynamic sidebar is open
+    isTocSidebarOpen: false, // Melacak apakah sidebar dinamis tunggal terbuka
     currentView: 'home', // 'home', 'series-detail', 'volume-read'
     currentSeriesId: null,
     currentVolumeId: null,
@@ -20,6 +29,7 @@ const appState = {
     currentVolumeData: null,
 };
 
+// UTILITAS UMUM
 const debounce = (func, delay) => {
     let timeout;
     return function(...args) {
@@ -29,10 +39,16 @@ const debounce = (func, delay) => {
     };
 };
 
+// LAYANAN DATA (FETCHING & CACHING)
 const dataService = {
     CACHE_PREFIX: 'app_data_cache_',
-    CACHE_EXPIRATION_SECONDS: 300,
+    CACHE_EXPIRATION_SECONDS: 300, // Waktu kedaluwarsa cache dalam detik (misal: 300 detik = 5 menit)
 
+    /**
+     * Mengambil data dari localStorage.
+     * @param {string} key Kunci cache.
+     * @returns {object|null} Objek cache termasuk data, timestamp, dan status kedaluwarsa, atau null jika tidak ada/error.
+     */
     getCache(key) {
         try {
             const cachedItem = localStorage.getItem(this.CACHE_PREFIX + key);
@@ -44,16 +60,21 @@ const dataService = {
             return { data, timestamp, isExpired: (now - timestamp >= this.CACHE_EXPIRATION_SECONDS * 1000) };
         } catch (e) {
             console.error('Error reading from cache:', e);
-            localStorage.removeItem(this.CACHE_PREFIX + key);
+            localStorage.removeItem(this.CACHE_PREFIX + key); // Hapus cache yang rusak
             return null;
         }
     },
 
+    /**
+     * Menyimpan data ke localStorage dengan timestamp.
+     * @param {string} key Kunci cache.
+     * @param {any} data Data yang akan disimpan.
+     */
     setCache(key, data) {
         try {
             const itemToCache = {
                 data: data,
-                timestamp: new Date().getTime()
+                timestamp: new Date().getTime() // Simpan stempel waktu saat ini
             };
             localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(itemToCache));
         } catch (e) {
@@ -61,30 +82,32 @@ const dataService = {
         }
     },
 
+    /**
+     * Mengambil file JSON dari jaringan, dengan fallback ke cache lokal.
+     * @param {string} path Jalur file JSON (harus absolut, dimulai dengan '/').
+     * @returns {Promise<object|null>} Data JSON atau null jika gagal.
+     */
     async fetchJson(path) {
         const cacheKey = path;
         let cachedData = this.getCache(cacheKey);
 
         console.log(`Mencoba mengambil data dari jaringan untuk: ${path} (mengizinkan cache HTTP browser)`);
         try {
+            // Mengizinkan browser untuk menggunakan mekanisme cache HTTP standar (ETag, Last-Modified)
             const response = await fetch(path); 
             
-            // --- LOGGING TAMBAHAN UNTUK DIAGNOSIS ---
             console.log("Fetch response details for:", path);
             console.log("Response URL:", response.url);
             console.log("Response Status:", response.status);
             console.log("Response OK:", response.ok);
             console.log("Response Content-Type:", response.headers.get('Content-Type'));
-            // --- AKHIR LOGGING TAMBAHAN ---
 
             if (!response.ok) {
-                // Jika respons tidak OK, coba baca teksnya untuk debugging lebih lanjut
                 const errorText = await response.text();
                 console.error(`Respons tidak OK untuk ${path}. Status: ${response.status}. Teks respons: ${errorText.substring(0, 200)}...`);
                 throw new Error(`Failed to load ${path}: ${response.statusText}`);
             }
 
-            // Periksa Content-Type sebelum parsing JSON
             const contentType = response.headers.get('Content-Type');
             if (!contentType || !contentType.includes('application/json')) {
                 const responseText = await response.text();
@@ -110,26 +133,39 @@ const dataService = {
         }
     },
 
-    // Mengubah jalur gambar bab menjadi absolut
+    /**
+     * Mengembalikan jalur gambar bab yang absolut.
+     * @param {string} seriesId ID seri.
+     * @param {string} volumeId ID volume.
+     * @param {string} imageName Nama file gambar.
+     * @returns {string} Jalur absolut ke gambar bab.
+     */
     getChapterImagePath(seriesId, volumeId, imageName) {
-        return `/images/${seriesId}/${volumeId}/${imageName}`; // Jalur absolut
+        return `/images/${seriesId}/${volumeId}/${imageName}`;
     },
 
-    // Fungsi baru untuk memastikan jalur cover gambar adalah absolut
+    /**
+     * Mengembalikan jalur cover gambar yang absolut.
+     * @param {string} relativePath Jalur relatif cover.
+     * @returns {string} Jalur absolut ke gambar cover.
+     */
     getAbsoluteCoverPath(relativePath) {
         if (!relativePath) {
-            return ''; // Mengembalikan string kosong jika jalur kosong
+            return '';
         }
-        // Periksa apakah jalur sudah absolut (dimulai dengan '/', 'http://', atau 'https://')
         if (relativePath.startsWith('/') || relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
             return relativePath;
         }
-        // Jika tidak, tambahkan '/' di awal
         return '/' + relativePath;
     }
 };
 
+// LAYANAN UI (RENDERING KONTEN)
 const uiService = {
+    /**
+     * Merender konten dengan efek transisi fade-out/fade-in.
+     * @param {string} contentHtml HTML konten yang akan dirender.
+     */
     async renderContentWithTransition(contentHtml) {
         DOMElements.dynamicContent.classList.add('fade-out');
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -137,17 +173,17 @@ const uiService = {
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
-    // Function to create or update the single dynamic sidebar content
+    /**
+     * Membuat atau memperbarui konten sidebar dinamis.
+     */
     renderDynamicSidebarContent() {
-        // Create sidebar element if it doesn't exist
         if (!DOMElements.tocSidebar) {
             const tocSidebarElement = document.createElement('aside');
             tocSidebarElement.id = 'tocSidebar';
-            tocSidebarElement.classList.add('app-sidebar', 'toc-sidebar-hidden'); // Add hidden class initially
+            tocSidebarElement.classList.add('app-sidebar', 'toc-sidebar-hidden');
             document.body.appendChild(tocSidebarElement);
             DOMElements.tocSidebar = tocSidebarElement;
 
-            // Attach event listener for close button
             tocSidebarElement.addEventListener('click', (event) => {
                 if (event.target.closest('#closeTocSidebar')) {
                     app.toggleTocSidebar(false);
@@ -177,8 +213,8 @@ const uiService = {
                 chaptersHtml = `<li class="toc-menu-item text-gray-500 px-3 py-2">Tidak ada bab ditemukan.</li>`;
             }
 
+            // Menghapus tombol "Kembali ke Seri" dari sidebar
             sidebarContentHtml = `
-                <!-- Tombol "Kembali ke Seri" dihapus dari sini -->
                 <li class="border-t border-gray-200 my-2"></li>
                 ${chaptersHtml}
             `;
@@ -227,21 +263,26 @@ const uiService = {
             </nav>
         `;
 
-        // Ensure it's hidden on mobile initially if not explicitly opened
         if (appState.isMobile && !appState.isTocSidebarOpen) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
         }
     },
 
+    /**
+     * Menyembunyikan sidebar TOC dan overlay.
+     */
     removeTocSidebar() {
-        // This function will now just hide the sidebar, not remove it from DOM
         if (DOMElements.tocSidebar) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-            appState.isTocSidebarOpen = false; // Reset state
+            appState.isTocSidebarOpen = false;
         }
         DOMElements.overlay.classList.add('hidden');
     },
 
+    /**
+     * Merender konten halaman beranda.
+     * @param {Array<object>} seriesIndex Data indeks seri.
+     */
     async renderHomepageContent(seriesIndex) {
         let seriesHtml = ``;
         seriesIndex.forEach(series => {
@@ -278,6 +319,11 @@ const uiService = {
         uiService.renderContentWithTransition(contentHtml);
     },
 
+    /**
+     * Merender konten halaman detail seri.
+     * @param {object} info Data informasi seri.
+     * @param {Array<object>} volumes Data volume seri.
+     */
     async renderSeriesDetailContent(info, volumes) {
         let volumesHtml = '';
         volumes.forEach(volume => {
@@ -346,6 +392,13 @@ const uiService = {
         uiService.renderContentWithTransition(contentHtml);
     },
 
+    /**
+     * Merender konten bab.
+     * @param {object} chapterData Data bab.
+     * @param {object} volumeData Data volume.
+     * @param {number} chapterIndex Indeks bab saat ini.
+     * @param {number} totalChapters Jumlah total bab dalam volume.
+     */
     async renderChapterContent(chapterData, volumeData, chapterIndex, totalChapters) {
         let chapterContentHtml = '';
         chapterData.konten.forEach(item => {
@@ -405,133 +458,140 @@ const uiService = {
     }
 };
 
+// LAYANAN NAVIGASI (MANAJEMEN URL & STATE)
 const navigationService = {
-    // Fungsi untuk memuat konten berdasarkan URL saat ini
+    /**
+     * Memperbarui appState dan menerapkan layout berdasarkan perubahan navigasi.
+     * @param {string} view Nama tampilan baru ('home', 'series-detail', 'volume-read').
+     * @param {string|null} seriesId ID seri (opsional).
+     * @param {string|null} volumeId ID volume (opsional).
+     * @param {number|null} chapterIndex Indeks bab (opsional).
+     */
+    _updateAppStateAndLayout(view, seriesId = null, volumeId = null, chapterIndex = 0) {
+        appState.currentView = view;
+        appState.currentSeriesId = seriesId;
+        appState.currentVolumeId = volumeId;
+        appState.currentChapterIndex = chapterIndex;
+
+        // Kelola sidebar TOC berdasarkan tampilan dan status mobile/desktop
+        if (appState.currentView === 'volume-read' && !appState.isMobile) {
+            app.toggleTocSidebar(true); // Selalu buka TOC di desktop untuk tampilan baca
+        } else {
+            app.toggleTocSidebar(false); // Tutup TOC di tampilan lain atau di mobile
+        }
+        app.applyLayoutClasses();
+    },
+
+    /**
+     * Memuat konten berdasarkan URL saat ini.
+     */
     async loadContentFromUrl() {
         const path = window.location.pathname;
         console.log("Loading content from URL:", path);
 
-        // Regex untuk mencocokkan pola URL
-        const seriesDetailRegex = /^\/series\/([a-zA-Z0-9_-]+)$/;
-        const volumeReadRegex = /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)$/;
-        const chapterReadRegex = /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)\/chapter\/(\d+)$/;
-
         let match;
 
         if (path === '/' || path === '/index.html') {
-            appState.currentView = 'home';
-            appState.currentSeriesId = null;
-            appState.currentVolumeId = null;
-            appState.currentChapterIndex = 0;
-            uiService.removeTocSidebar();
-            app.applyLayoutClasses();
-            const seriesIndex = await dataService.fetchJson('/series/series-index.json'); // Jalur absolut
+            this._updateAppStateAndLayout('home');
+            const seriesIndex = await dataService.fetchJson('/series/series-index.json');
             if (seriesIndex) uiService.renderHomepageContent(seriesIndex);
-        } else if ((match = path.match(chapterReadRegex))) {
+        } else if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
             const seriesId = match[1];
             const volumeId = match[2];
             const chapterIndex = parseInt(match[3], 10);
             
-            appState.currentView = 'volume-read';
-            appState.currentSeriesId = seriesId;
-            appState.currentVolumeId = volumeId;
-            appState.currentChapterIndex = chapterIndex;
+            this._updateAppStateAndLayout('volume-read', seriesId, volumeId, chapterIndex);
 
-            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`); // Jalur absolut
+            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) return;
 
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
             
-            // Toggle sidebar based on mobile/desktop view
-            if (!appState.isMobile) {
-                app.toggleTocSidebar(true);
-            } else {
-                app.toggleTocSidebar(false);
-            }
-            app.applyLayoutClasses();
-
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
             if (!chapterInfo) {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab tidak ditemukan.</div>`;
                 return;
             }
-            const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`); // Jalur absolut
+            const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`);
             if (chapterData) uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
 
-        } else if ((match = path.match(volumeReadRegex))) {
+        } else if ((match = path.match(URL_REGEX.VOLUME_READ))) {
             const seriesId = match[1];
             const volumeId = match[2];
 
-            appState.currentView = 'volume-read'; // Set view for volume, which also uses TOC
-            appState.currentSeriesId = seriesId;
-            appState.currentVolumeId = volumeId;
-            appState.currentChapterIndex = 0; // Reset chapter index when entering a new volume
+            this._updateAppStateAndLayout('volume-read', seriesId, volumeId, 0); // Default ke bab 0
 
-            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`); // Jalur absolut
+            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) return;
 
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
 
-            // Toggle sidebar based on mobile/desktop view
-            if (!appState.isMobile) {
-                app.toggleTocSidebar(true);
-            } else {
-                app.toggleTocSidebar(false);
-            }
-            app.applyLayoutClasses();
-
-            // Render the first chapter of the volume by default
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 const firstChapterInfo = appState.currentVolumeChapters[0];
-                const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${firstChapterInfo.file}`); // Jalur absolut
+                const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${firstChapterInfo.file}`);
                 if (chapterData) uiService.renderChapterContent(chapterData, volumeData, 0, appState.currentVolumeChapters.length);
             } else {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-gray-500">Tidak ada bab ditemukan untuk volume ini.</div>`;
             }
 
-        } else if ((match = path.match(seriesDetailRegex))) {
+        } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
             const seriesId = match[1];
-            appState.currentView = 'series-detail';
-            appState.currentSeriesId = seriesId;
-            appState.currentVolumeId = null;
-            appState.currentChapterIndex = 0;
-            uiService.removeTocSidebar();
-            app.applyLayoutClasses();
-            const info = await dataService.fetchJson(`/series/${seriesId}/info.json`); // Jalur absolut
-            const volumes = await dataService.fetchJson(`/series/${seriesId}/volumes.json`); // Jalur absolut
+            this._updateAppStateAndLayout('series-detail', seriesId);
+            const info = await dataService.fetchJson(`/series/${seriesId}/info.json`);
+            const volumes = await dataService.fetchJson(`/series/${seriesId}/volumes.json`);
             if (info && volumes) uiService.renderSeriesDetailContent(info, volumes);
         } else {
-            // Fallback to homepage if URL doesn't match any pattern
             console.warn("URL tidak dikenal, mengarahkan ke beranda:", path);
-            navigationService.goToHomepage(); // Use goToHomepage to push the correct URL
+            this.goToHomepage(); // Gunakan goToHomepage untuk mendorong URL yang benar
         }
     },
 
-    // Fungsi navigasi yang akan memperbarui URL dan memuat konten
+    /**
+     * Navigasi ke halaman beranda.
+     */
     goToHomepage() {
         history.pushState(null, '', '/');
-        navigationService.loadContentFromUrl();
+        this.loadContentFromUrl();
     },
 
+    /**
+     * Navigasi ke halaman detail seri.
+     * @param {string} seriesId ID seri.
+     */
     goToSeriesDetail(seriesId) {
         history.pushState(null, '', `/series/${seriesId}`);
-        navigationService.loadContentFromUrl();
+        this.loadContentFromUrl();
     },
 
+    /**
+     * Navigasi ke halaman volume.
+     * @param {string} seriesId ID seri.
+     * @param {string} volumeId ID volume.
+     */
     goToVolume(seriesId, volumeId) {
         history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}`);
-        navigationService.loadContentFromUrl();
+        this.loadContentFromUrl();
     },
 
+    /**
+     * Navigasi ke halaman bab.
+     * @param {string} seriesId ID seri.
+     * @param {string} volumeId ID volume.
+     * @param {number} chapterIndex Indeks bab.
+     */
     goToChapter(seriesId, volumeId, chapterIndex) {
         history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/${chapterIndex}`);
-        navigationService.loadContentFromUrl();
+        this.loadContentFromUrl();
     }
 };
 
+// FUNGSI UTAMA APLIKASI
 const app = {
+    /**
+     * Menerapkan kelas layout berdasarkan status mobile/desktop dan sidebar.
+     */
     applyLayoutClasses() {
         if (appState.isMobile) {
             DOMElements.mainContent.classList.add('main-mobile-full');
@@ -570,6 +630,9 @@ const app = {
         }
     },
 
+    /**
+     * Memeriksa apakah perangkat adalah mobile dan menyesuaikan layout.
+     */
     checkMobile() {
         const wasMobile = appState.isMobile;
         appState.isMobile = window.innerWidth < 768;
@@ -582,6 +645,10 @@ const app = {
         }
     },
 
+    /**
+     * Mengelola pembukaan/penutupan sidebar dinamis.
+     * @param {boolean|null} forceState Jika true/false, akan memaksa status sidebar.
+     */
     toggleTocSidebar(forceState = null) {
         uiService.renderDynamicSidebarContent();
 
@@ -609,6 +676,9 @@ const app = {
         app.applyLayoutClasses();
     },
 
+    /**
+     * Menyiapkan semua event listener aplikasi.
+     */
     setupEventListeners() {
         DOMElements.sidebarToggle.addEventListener('click', () => app.toggleTocSidebar());
         DOMElements.overlay.addEventListener('click', function() {
@@ -635,4 +705,5 @@ const app = {
     }
 };
 
+// INISIALISASI APLIKASI
 app.setupEventListeners();
