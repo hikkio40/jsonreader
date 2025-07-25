@@ -12,12 +12,9 @@ const DOMElements = {
 
 // Pola Regex untuk URL navigasi yang diperbarui
 const URL_REGEX = {
-    // Mengubah pola agar tidak menyertakan '/series' di awal
     SERIES_DETAIL: /^\/([a-zA-Z0-9_-]+)$/,
-    // Mengubah pola agar tidak menyertakan '/volume/' literal di tengah
-    VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)$/, // Matches /seriesId/volumeId
-    // Mengubah pola agar tidak menyertakan '/volume/' literal di tengah
-    CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/chapter\/(\d+)$/, // Matches /seriesId/volumeId/chapter/chapterIndex
+    VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)$/, 
+    CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/(\d+)$/, 
 };
 
 // MANAJEMEN STATUS APLIKASI
