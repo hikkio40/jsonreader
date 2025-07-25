@@ -1,0 +1,18 @@
+{
+  "id": "illustration",
+  "judul": "Illustration",
+  "konten": [
+    {
+      "gambar": "color1.jpg",
+    },
+    {
+      "gambar": "color2.jpg",
+    },
+    {
+      "gambar": "color3.jpg",
+    },
+    {
+      "gambar": "color4.jpg",
+    },
+  ]
+}
