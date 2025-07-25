@@ -512,7 +512,8 @@ const navigationService = {
             
             // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
             uiService.renderDynamicSidebarContent(); 
-            appState.isTocSidebarOpen = true; // Secara eksplisit atur status terbuka
+            // Hanya buka sidebar secara otomatis di desktop
+            appState.isTocSidebarOpen = !appState.isMobile; 
             app.applyLayoutClasses(); // Terapkan kelas layout untuk menampilkan sidebar
             
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
@@ -545,7 +546,8 @@ const navigationService = {
 
             // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
             uiService.renderDynamicSidebarContent(); 
-            appState.isTocSidebarOpen = true; // Secara eksplisit atur status terbuka
+            // Hanya buka sidebar secara otomatis di desktop
+            appState.isTocSidebarOpen = !appState.isMobile; 
             app.applyLayoutClasses(); // Terapkan kelas layout untuk menampilkan sidebar
 
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
