@@ -14,10 +14,8 @@ const DOMElements = {
 const URL_REGEX = {
     // Mengubah pola agar tidak menyertakan '/series' di awal
     SERIES_DETAIL: /^\/([a-zA-Z0-9_-]+)$/,
-    // Mengubah pola agar tidak menyertakan '/volume/' literal di tengah
     // Sekarang cocok dengan /seriesId/volumeId (contoh: /thegirlwhowantstobeahero/1)
     VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)$/, 
-    // Mengubah pola agar tidak menyertakan '/volume/' literal dan '/chapter/' di tengah
     // Sekarang cocok dengan /seriesId/volumeId/chapterIndex (contoh: /thegirlwhowantstobeahero/1/0)
     CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/(\d+)$/, 
 };
@@ -208,6 +206,7 @@ const uiService = {
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 appState.currentVolumeChapters.forEach((chapter, index) => {
                     const isActive = index === appState.currentChapterIndex ? 'active' : '';
+                    // Menggunakan navigationService.goToChapter yang sudah diperbarui
                     chaptersHtml += `
                         <li class="toc-menu-item">
                             <a href="#" onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); app.toggleTocSidebar(false); return false;" class="flex items-center ${isActive}">
@@ -334,6 +333,7 @@ const uiService = {
     async renderSeriesDetailContent(info, volumes) {
         let volumesHtml = '';
         volumes.forEach(volume => {
+            // Menggunakan navigationService.goToVolume yang sudah diperbarui
             volumesHtml += `
                 <div class="cursor-pointer hover:opacity-80 transition-opacity volume-card" onclick="navigationService.goToVolume('${appState.currentSeriesId}', '${volume.id}')">
                     <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 flex items-center justify-center overflow-hidden volume-cover-placeholder">
@@ -478,9 +478,35 @@ const navigationService = {
         console.log("Entering _updateAppState. Proposed view:", view, "isMobile:", appState.isMobile);
         appState.currentView = view;
         appState.currentSeriesId = seriesId;
-        appState.currentVolumeId = volumeId;
+        appState.currentVolumeId = volumeId; // appState.currentVolumeId akan menyimpan ID yang ramah URL (misal: "1")
         appState.currentChapterIndex = chapterIndex;
         console.log("Exiting _updateAppState. Current appState:", appState);
+    },
+
+    /**
+     * Fungsi helper untuk mengonversi ID volume dari format data (misal: "volume1") menjadi format URL (misal: "1").
+     * @param {string} originalVolumeId ID volume dari data.
+     * @returns {string} ID volume yang bersih untuk URL.
+     */
+    getVolumeIdForUrl(originalVolumeId) {
+        const match = originalVolumeId.match(/^volume(\d+)$/i);
+        if (match && match[1]) {
+            return match[1]; // Mengembalikan hanya angka (misal: "1" dari "volume1")
+        }
+        return originalVolumeId; // Mengembalikan apa adanya jika tidak ada awalan "volume"
+    },
+
+    /**
+     * Fungsi helper untuk mengonversi ID volume dari format URL (misal: "1") menjadi format file (misal: "volume1").
+     * @param {string} urlVolumeId ID volume dari URL.
+     * @returns {string} ID volume yang sesuai untuk nama file.
+     */
+    getVolumeIdForFile(urlVolumeId) {
+        // Asumsi sistem file menggunakan format 'volumeX' untuk ID numerik
+        if (!isNaN(parseInt(urlVolumeId, 10)) && String(parseInt(urlVolumeId, 10)) === urlVolumeId) {
+            return `volume${urlVolumeId}`;
+        }
+        return urlVolumeId; // Mengembalikan apa adanya jika bukan ID numerik sederhana
     },
 
     /**
@@ -500,13 +526,15 @@ const navigationService = {
             app.applyLayoutClasses(); // Terapkan layout
         } else if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
             const seriesId = match[1];
-            const volumeId = match[2];
+            const urlVolumeId = match[2]; // Ini akan menjadi "1" dari URL
             const chapterIndex = parseInt(match[3], 10);
             
-            this._updateAppState('volume-read', seriesId, volumeId, chapterIndex);
+            const fileVolumeId = this.getVolumeIdForFile(urlVolumeId); // Ini akan menjadi "volume1" untuk mengambil file
+
+            this._updateAppState('volume-read', seriesId, urlVolumeId, chapterIndex); // Simpan ID ramah URL
 
             // Jalur fetch data JSON tetap menggunakan '/series/' karena itu adalah struktur folder di server
-            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
+            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${fileVolumeId}/${fileVolumeId}.json`);
             if (!volumeData) {
                 appState.isTocSidebarOpen = false; // Sembunyikan TOC jika data volume gagal dimuat
                 app.applyLayoutClasses(); // Terapkan layout
@@ -530,21 +558,23 @@ const navigationService = {
                 return;
             }
             // Jalur fetch data JSON tetap menggunakan '/series/'
-            const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`);
+            const chapterData = await dataService.fetchJson(`/series/${seriesId}/${fileVolumeId}/${chapterInfo.file}`);
             if (chapterData) uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
 
         } else if ((match = path.match(URL_REGEX.VOLUME_READ))) {
             const seriesId = match[1];
-            const volumeId = match[2];
+            const urlVolumeId = match[2]; // Ini akan menjadi "1" dari URL
+
+            const fileVolumeId = this.getVolumeIdForFile(urlVolumeId); // Ini akan menjadi "volume1" untuk mengambil file
 
             // Ketika URL hanya sampai volume, kita navigasi ke bab 0 dan perbarui URL
-            this._updateAppState('volume-read', seriesId, volumeId, 0); // Default ke bab 0
+            this._updateAppState('volume-read', seriesId, urlVolumeId, 0); // Default ke bab 0, simpan ID ramah URL
             // Memperbarui URL di history tanpa menambah entri history baru
             // URL sekarang akan menjadi /seriesId/volumeId/0
-            history.replaceState(null, '', `/${seriesId}/${volumeId}/0`);
+            history.replaceState(null, '', `/${seriesId}/${urlVolumeId}/0`); // Gunakan ID ramah URL untuk URL
 
             // Jalur fetch data JSON tetap menggunakan '/series/'
-            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
+            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${fileVolumeId}/${fileVolumeId}.json`);
             if (!volumeData) {
                 appState.isTocSidebarOpen = false; // Sembunyikan TOC jika data volume gagal dimuat
                 app.applyLayoutClasses(); // Terapkan layout
@@ -563,7 +593,7 @@ const navigationService = {
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 const firstChapterInfo = appState.currentVolumeChapters[0];
                 // Jalur fetch data JSON tetap menggunakan '/series/'
-                const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${firstChapterInfo.file}`);
+                const chapterData = await dataService.fetchJson(`/series/${seriesId}/${fileVolumeId}/${firstChapterInfo.file}`);
                 if (chapterData) uiService.renderChapterContent(chapterData, volumeData, 0, appState.currentVolumeChapters.length);
             } else {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-gray-500">Tidak ada bab ditemukan untuk volume ini.</div>`;
@@ -607,25 +637,29 @@ const navigationService = {
     /**
      * Navigasi ke halaman volume.
      * @param {string} seriesId ID seri.
-     * @param {string} volumeId ID volume.
+     * @param {string} originalVolumeId ID volume dari data (misal: "volume1").
      */
-    goToVolume(seriesId, volumeId) {
+    goToVolume(seriesId, originalVolumeId) {
+        const urlVolumeId = this.getVolumeIdForUrl(originalVolumeId); // Konversi ke "1"
         // Langsung navigasi ke bab 0 dari volume tersebut dan perbarui URL
         // URL sekarang akan menjadi /seriesId/volumeId/0
-        history.pushState(null, '', `/${seriesId}/${volumeId}/0`);
+        history.pushState(null, '', `/${seriesId}/${urlVolumeId}/0`);
         this.loadContentFromUrl();
     },
 
     /**
      * Navigasi ke halaman bab.
      * @param {string} seriesId ID seri.
-     * @param {string} volumeId ID volume.
+     * @param {string} currentVolumeId ID volume saat ini (sudah ramah URL, misal: "1").
      * @param {number} chapterIndex Indeks bab.
      */
-    goToChapter(seriesId, volumeId, chapterIndex) {
+    goToChapter(seriesId, currentVolumeId, chapterIndex) {
+        // currentVolumeId seharusnya sudah dalam format URL (misal: "1") karena diambil dari appState
+        // Namun, kita tetap menggunakan getVolumeIdForUrl untuk keamanan, jika ada kasus lain.
+        const urlVolumeId = this.getVolumeIdForUrl(currentVolumeId); 
         // Memperbarui URL di history
         // URL sekarang akan menjadi /seriesId/volumeId/chapterIndex
-        history.pushState(null, '', `/${seriesId}/${volumeId}/${chapterIndex}`);
+        history.pushState(null, '', `/${seriesId}/${urlVolumeId}/${chapterIndex}`);
         this.loadContentFromUrl();
     }
 };
