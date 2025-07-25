@@ -32,6 +32,9 @@ const debounce = (func, delay) => {
 const dataService = {
     CACHE_PREFIX: 'app_data_cache_',
     // Waktu kedaluwarsa cache dalam detik (misal: 300 detik = 5 menit)
+    // Ini akan digunakan sebagai fallback jika fetch dari jaringan gagal
+    // Catatan: Dengan optimasi baru, nilai ini menjadi kurang relevan untuk revalidasi utama,
+    // tetapi tetap berguna untuk fallback jika jaringan benar-benar mati.
     CACHE_EXPIRATION_SECONDS: 300, 
 
     getCache(key) {
@@ -42,14 +45,8 @@ const dataService = {
             }
             const { data, timestamp } = JSON.parse(cachedItem);
             const now = new Date().getTime();
-            // Periksa apakah cache masih valid
-            if (now - timestamp < this.CACHE_EXPIRATION_SECONDS * 1000) {
-                return data;
-            } else {
-                // Cache sudah kedaluwarsa, hapus dari localStorage
-                localStorage.removeItem(this.CACHE_PREFIX + key);
-                return null;
-            }
+            // Mengembalikan data dan status kedaluwarsa
+            return { data, timestamp, isExpired: (now - timestamp >= this.CACHE_EXPIRATION_SECONDS * 1000) };
         } catch (e) {
             console.error('Error reading from cache:', e);
             localStorage.removeItem(this.CACHE_PREFIX + key); // Hapus cache yang rusak
@@ -71,26 +68,38 @@ const dataService = {
 
     async fetchJson(path) {
         const cacheKey = path;
+        let cachedData = this.getCache(cacheKey);
 
-        const cachedData = this.getCache(cacheKey);
-        if (cachedData) {
-            console.log(`Menggunakan data dari cache untuk: ${path}`);
-            return cachedData;
-        }
-
-        console.log(`Mengambil data dari jaringan untuk: ${path}`);
+        // Selalu coba ambil dari jaringan terlebih dahulu, mengizinkan browser cache
+        console.log(`Mencoba mengambil data dari jaringan untuk: ${path} (mengizinkan cache HTTP browser)`);
         try {
-            const response = await fetch(path);
+            // Hapus parameter query unik dan opsi 'no-cache'
+            // Ini akan memungkinkan browser untuk mengirim If-None-Match/If-Modified-Since
+            // dan menerima 304 Not Modified jika file tidak berubah.
+            const response = await fetch(path); 
+            
             if (!response.ok) {
+                // Jika respons tidak OK (misal 404, 500, dll.), lempar error
                 throw new Error(`Failed to load ${path}: ${response.statusText}`);
             }
+
             const data = await response.json();
-            this.setCache(cacheKey, data);
+            this.setCache(cacheKey, data); // Simpan data terbaru ke cache lokal
+            console.log(`Berhasil mengambil data terbaru dari jaringan untuk: ${path}`);
             return data;
+
         } catch (error) {
-            console.error('Error fetching JSON:', error);
-            DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia. Silakan coba lagi nanti atau hubungi administrator.</div>`;
-            return null;
+            console.error(`Gagal mengambil data dari jaringan untuk ${path}. Mencoba menggunakan cache lokal sebagai fallback:`, error);
+            
+            // Jika gagal mengambil dari jaringan, coba gunakan data dari cache lokal
+            if (cachedData && cachedData.data) { // Periksa apakah ada data di cache
+                console.log(`Menggunakan data dari cache lokal (sebagai fallback) untuk: ${path}`);
+                return cachedData.data;
+            } else {
+                // Tidak ada data di cache atau cache rusak
+                DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia atau gagal dimuat. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+                return null;
+            }
         }
     },
 
