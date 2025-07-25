@@ -3,12 +3,12 @@
     {
       "id": "prologue",
       "judul": "Prologue",
-      "file": "bab1.json" 
+      "file": "prologue.json" 
     },
     {
-      "id": "bab2",
-      "judul": "Bab 2 - Anjay",
-      "file": "bab2.json"
+      "id": "bab1",
+      "judul": "Chapter 1",
+      "file": "chapter1.json"
     }
   ]
 }
