@@ -356,7 +356,6 @@ const uiService = {
                 
                 <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
                     <div>${prevButton}</div>
-                    <div class="text-gray-500 chapter-page-info">Bab ${chapterIndex + 1} dari ${totalChapters}</div>
                     <div>${nextButton}</div>
                 </div>
             </div>
