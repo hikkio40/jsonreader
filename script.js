@@ -69,8 +69,27 @@ const dataService = {
         try {
             const response = await fetch(path); 
             
+            // --- LOGGING TAMBAHAN UNTUK DIAGNOSIS ---
+            console.log("Fetch response details for:", path);
+            console.log("Response URL:", response.url);
+            console.log("Response Status:", response.status);
+            console.log("Response OK:", response.ok);
+            console.log("Response Content-Type:", response.headers.get('Content-Type'));
+            // --- AKHIR LOGGING TAMBAHAN ---
+
             if (!response.ok) {
+                // Jika respons tidak OK, coba baca teksnya untuk debugging lebih lanjut
+                const errorText = await response.text();
+                console.error(`Respons tidak OK untuk ${path}. Status: ${response.status}. Teks respons: ${errorText.substring(0, 200)}...`);
                 throw new Error(`Failed to load ${path}: ${response.statusText}`);
+            }
+
+            // Periksa Content-Type sebelum parsing JSON
+            const contentType = response.headers.get('Content-Type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error(`Respons bukan JSON untuk ${path}. Content-Type: ${contentType}. Teks respons awal: ${responseText.substring(0, 200)}...`);
+                throw new Error(`Expected JSON but received ${contentType || 'unknown type'}`);
             }
 
             const data = await response.json();
@@ -596,7 +615,7 @@ const app = {
         });
 
         window.addEventListener('resize', debounce(app.checkMobile, 200));
-        window.addEventListener('popstate', navigationService.loadContentFromUrl); // Listen for browser back/forward
+        window.addEventListener('popstate', navigationService.loadContentFromUrl);
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
@@ -608,7 +627,7 @@ const app = {
 
         document.addEventListener('DOMContentLoaded', function() {
             app.checkMobile();
-            navigationService.loadContentFromUrl(); // Load content based on initial URL
+            navigationService.loadContentFromUrl();
         });
     }
 };
