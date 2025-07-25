@@ -35,7 +35,7 @@ const debounce = (func, delay) => {
     return function(...args) {
         const context = this;
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), delay);
+        timeout = setTimeout(() => func.apply(context, delay), delay);
     };
 };
 
@@ -520,7 +520,9 @@ const navigationService = {
             const seriesId = match[1];
             const volumeId = match[2];
 
+            // Ketika URL hanya sampai volume, kita navigasi ke bab 0 dan perbarui URL
             this._updateAppStateAndLayout('volume-read', seriesId, volumeId, 0); // Default ke bab 0
+            history.replaceState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/0`); // Perbarui URL tanpa menambah entri history
 
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) return;
@@ -571,7 +573,8 @@ const navigationService = {
      * @param {string} volumeId ID volume.
      */
     goToVolume(seriesId, volumeId) {
-        history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}`);
+        // Langsung navigasi ke bab 0 dari volume tersebut
+        history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/0`);
         this.loadContentFromUrl();
     },
 
