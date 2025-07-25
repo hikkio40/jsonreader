@@ -24,6 +24,21 @@
       "id": "chapter3",
       "judul": "Chapter 3",
       "file": "chapter3.json"
+    },
+    {
+      "id": "chapter4",
+      "judul": "Chapter 4",
+      "file": "chapter4.json"
+    },
+    {
+      "id": "epilogue",
+      "judul": "Epilogue",
+      "file": "epilogue.json"
+    },
+    {
+      "id": "afterword",
+      "judul": "Afterword",
+      "file": "afterword.json"
     }
   ]
 }
