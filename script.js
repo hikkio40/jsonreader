@@ -31,21 +31,39 @@ const debounce = (func, delay) => {
 
 const dataService = {
     CACHE_PREFIX: 'app_data_cache_',
+    // Waktu kedaluwarsa cache dalam detik (misal: 300 detik = 5 menit)
+    CACHE_EXPIRATION_SECONDS: 300, 
 
     getCache(key) {
         try {
-            const cachedData = localStorage.getItem(this.CACHE_PREFIX + key);
-            return cachedData ? JSON.parse(cachedData) : null;
+            const cachedItem = localStorage.getItem(this.CACHE_PREFIX + key);
+            if (!cachedItem) {
+                return null;
+            }
+            const { data, timestamp } = JSON.parse(cachedItem);
+            const now = new Date().getTime();
+            // Periksa apakah cache masih valid
+            if (now - timestamp < this.CACHE_EXPIRATION_SECONDS * 1000) {
+                return data;
+            } else {
+                // Cache sudah kedaluwarsa, hapus dari localStorage
+                localStorage.removeItem(this.CACHE_PREFIX + key);
+                return null;
+            }
         } catch (e) {
             console.error('Error reading from cache:', e);
-            localStorage.removeItem(this.CACHE_PREFIX + key);
+            localStorage.removeItem(this.CACHE_PREFIX + key); // Hapus cache yang rusak
             return null;
         }
     },
 
     setCache(key, data) {
         try {
-            localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(data));
+            const itemToCache = {
+                data: data,
+                timestamp: new Date().getTime() // Simpan stempel waktu saat ini
+            };
+            localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(itemToCache));
         } catch (e) {
             console.error('Error writing to cache:', e);
         }
@@ -56,9 +74,11 @@ const dataService = {
 
         const cachedData = this.getCache(cacheKey);
         if (cachedData) {
+            console.log(`Menggunakan data dari cache untuk: ${path}`);
             return cachedData;
         }
 
+        console.log(`Mengambil data dari jaringan untuk: ${path}`);
         try {
             const response = await fetch(path);
             if (!response.ok) {
