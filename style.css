@@ -38,9 +38,10 @@
 }
 
 #tocSidebar .toc-header {
-    background-color: white;
     padding: 10px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
 }
 
 #tocSidebar .toc-nav {
