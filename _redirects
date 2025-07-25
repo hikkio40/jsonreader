@@ -1,0 +1,2 @@
+# Pastikan file JSON disajikan langsung dan tidak dialihkan ke index.html
+/series/* /series/:splat 200
