@@ -4,42 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Json Library</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/style.css">
 </head>
-<body class="bg-white text-black font-sans app-container">
-    <!-- Header Utama Aplikasi -->
-    <header id="mainAppHeader" class="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 py-3 px-4 z-40 transition-all duration-300 ease-in-out">
-        <div class="max-w-6xl mx-auto w-full flex items-center justify-between">
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header Aplikasi Utama -->
+    <header id="mainAppHeader" class="app-header fixed top-0 left-0 w-full bg-white shadow-md z-20 transition-all duration-300 ease-in-out">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center">
-                <button id="sidebarToggle" class="p-2 hover:bg-gray-100 rounded md:hidden">
-                    <span class="material-icons text-xl">menu</span>
+                <button id="sidebarToggle" class="p-2 mr-2 -ml-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden">
+                    <span class="material-icons text-2xl">menu</span>
                 </button>
-                <h1 id="mainTitle" class="text-xl font-semibold ml-4 md:ml-0">Json Library</h1>
+                <h1 id="mainTitle" class="text-xl font-bold text-blue-600">Json Library</h1>
             </div>
-            <!-- Navigasi Dummy di Kanan -->
-            <nav class="hidden md:flex space-x-4 header-main-nav">
-                <a href="#" class="text-gray-600 hover:text-black">Tentang</a>
-                <a href="#" class="text-gray-600 hover:text-black">Kontak</a>
-                <a href="#" class="text-gray-600 hover:text-black">Kebijakan Privasi</a>
+            <nav class="header-main-nav hidden md:block">
+                <ul class="flex space-x-4">
+                    <li><a href="/" onclick="navigationService.goToHomepage(); return false;" class="text-gray-600 hover:text-blue-600 transition-colors duration-200">Beranda</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-blue-600 transition-colors duration-200">Tentang</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-blue-600 transition-colors duration-200">Kontak</a></li>
+                </ul>
             </nav>
         </div>
     </header>
 
-    <!-- Overlay untuk mobile (untuk sidebar TOC) -->
-    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden app-overlay"></div>
+    <!-- Overlay untuk Sidebar Mobile -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Konten Utama -->
-    <main id="mainContent" class="px-6 min-h-screen transition-all duration-300 ease-in-out main-content-wrapper">
-        <div class="max-w-6xl mx-auto py-8 dynamic-content-area" id="dynamicContent">
-            <!-- Konten akan dimuat secara dinamis di sini -->
-            <div class="text-center py-10">
-                <p class="text-gray-500">Memuat konten...</p>
-            </div>
+    <!-- Konten Utama Aplikasi -->
+    <main id="mainContent" class="flex-1 pt-16 pb-8 px-4 md:px-8 lg:px-12 transition-all duration-300 ease-in-out overflow-y-auto">
+        <div id="dynamicContent" class="container mx-auto max-w-4xl py-8">
+            <!-- Konten dinamis akan dimuat di sini -->
+            <div class="text-center py-10 text-gray-500">Memuat konten...</div>
         </div>
     </main>
 
-    <script src="script.js"></script>
+    <!-- Footer Aplikasi -->
+    <footer class="app-footer bg-gray-100 text-gray-600 text-center py-4 text-sm mt-auto">
+        <div class="container mx-auto px-4">
+            &copy; 2025 Json Library. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Script Aplikasi Utama -->
+    <script src="/script.js"></script>
 </body>
 </html>
