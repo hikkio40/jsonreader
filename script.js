@@ -10,11 +10,14 @@ const DOMElements = {
     headerMainNav: document.querySelector('.header-main-nav'), // Referensi ke navigasi utama di header
 };
 
-// Pola Regex untuk URL navigasi
+// Pola Regex untuk URL navigasi yang diperbarui
 const URL_REGEX = {
-    SERIES_DETAIL: /^\/series\/([a-zA-Z0-9_-]+)$/,
-    VOLUME_READ: /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)$/,
-    CHAPTER_READ: /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)\/chapter\/(\d+)$/,
+    // Mengubah pola agar tidak menyertakan '/series' di awal
+    SERIES_DETAIL: /^\/([a-zA-Z0-9_-]+)$/,
+    // Mengubah pola agar tidak menyertakan '/volume/' literal di tengah
+    VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)$/, // Matches /seriesId/volumeId
+    // Mengubah pola agar tidak menyertakan '/volume/' literal di tengah
+    CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)\/chapter\/(\d+)$/, // Matches /seriesId/volumeId/chapter/chapterIndex
 };
 
 // MANAJEMEN STATUS APLIKASI
@@ -94,7 +97,7 @@ const dataService = {
         console.log(`Mencoba mengambil data dari jaringan untuk: ${path} (mengizinkan cache HTTP browser)`);
         try {
             // Mengizinkan browser untuk menggunakan mekanisme cache HTTP standar (ETag, Last-Modified)
-            const response = await fetch(path); 
+            const response = await fetch(path);
             
             console.log("Fetch response details for:", path);
             console.log("Response URL:", response.url);
@@ -141,6 +144,7 @@ const dataService = {
      * @returns {string} Jalur absolut ke gambar bab.
      */
     getChapterImagePath(seriesId, volumeId, imageName) {
+        // Jalur ini mengacu pada lokasi file di server, tidak perlu diubah
         return `/images/${seriesId}/${volumeId}/${imageName}`;
     },
 
@@ -350,7 +354,7 @@ const uiService = {
                         <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
                             ${info.cover ? `<img src="${dataService.getAbsoluteCoverPath(info.cover)}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>`}
+                            </svg>`}
                         </div>
                     </div>
                     
@@ -499,6 +503,7 @@ const navigationService = {
             
             this._updateAppState('volume-read', seriesId, volumeId, chapterIndex);
 
+            // Jalur fetch data JSON tetap menggunakan '/series/' karena itu adalah struktur folder di server
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) {
                 appState.isTocSidebarOpen = false; // Sembunyikan TOC jika data volume gagal dimuat
@@ -510,9 +515,9 @@ const navigationService = {
             appState.currentVolumeData = volumeData;
             
             // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
-            uiService.renderDynamicSidebarContent(); 
+            uiService.renderDynamicSidebarContent();
             // Hanya buka sidebar secara otomatis di desktop
-            appState.isTocSidebarOpen = !appState.isMobile; 
+            appState.isTocSidebarOpen = !appState.isMobile;
             app.applyLayoutClasses(); // Terapkan kelas layout untuk menampilkan sidebar
             
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
@@ -522,6 +527,7 @@ const navigationService = {
                 app.applyLayoutClasses(); // Terapkan layout
                 return;
             }
+            // Jalur fetch data JSON tetap menggunakan '/series/'
             const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`);
             if (chapterData) uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
 
@@ -531,8 +537,11 @@ const navigationService = {
 
             // Ketika URL hanya sampai volume, kita navigasi ke bab 0 dan perbarui URL
             this._updateAppState('volume-read', seriesId, volumeId, 0); // Default ke bab 0
-            history.replaceState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/0`); // Perbarui URL tanpa menambah entri history
+            // Memperbarui URL di history tanpa menambah entri history baru
+            // URL sekarang akan menjadi /seriesId/volumeId/chapter/0
+            history.replaceState(null, '', `/${seriesId}/${volumeId}/chapter/0`);
 
+            // Jalur fetch data JSON tetap menggunakan '/series/'
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) {
                 appState.isTocSidebarOpen = false; // Sembunyikan TOC jika data volume gagal dimuat
@@ -544,13 +553,14 @@ const navigationService = {
             appState.currentVolumeData = volumeData;
 
             // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
-            uiService.renderDynamicSidebarContent(); 
+            uiService.renderDynamicSidebarContent();
             // Hanya buka sidebar secara otomatis di desktop
-            appState.isTocSidebarOpen = !appState.isMobile; 
+            appState.isTocSidebarOpen = !appState.isMobile;
             app.applyLayoutClasses(); // Terapkan kelas layout untuk menampilkan sidebar
 
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 const firstChapterInfo = appState.currentVolumeChapters[0];
+                // Jalur fetch data JSON tetap menggunakan '/series/'
                 const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${firstChapterInfo.file}`);
                 if (chapterData) uiService.renderChapterContent(chapterData, volumeData, 0, appState.currentVolumeChapters.length);
             } else {
@@ -562,6 +572,7 @@ const navigationService = {
         } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
             const seriesId = match[1];
             this._updateAppState('series-detail', seriesId);
+            // Jalur fetch data JSON tetap menggunakan '/series/'
             const info = await dataService.fetchJson(`/series/${seriesId}/info.json`);
             const volumes = await dataService.fetchJson(`/series/${seriesId}/volumes.json`);
             if (info && volumes) uiService.renderSeriesDetailContent(info, volumes);
@@ -586,7 +597,8 @@ const navigationService = {
      * @param {string} seriesId ID seri.
      */
     goToSeriesDetail(seriesId) {
-        history.pushState(null, '', `/series/${seriesId}`);
+        // Memperbarui URL di history
+        history.pushState(null, '', `/${seriesId}`);
         this.loadContentFromUrl();
     },
 
@@ -596,8 +608,9 @@ const navigationService = {
      * @param {string} volumeId ID volume.
      */
     goToVolume(seriesId, volumeId) {
-        // Langsung navigasi ke bab 0 dari volume tersebut
-        history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/0`);
+        // Langsung navigasi ke bab 0 dari volume tersebut dan perbarui URL
+        // Menghilangkan literal '/volume/' dari URL yang ditampilkan
+        history.pushState(null, '', `/${seriesId}/${volumeId}/chapter/0`);
         this.loadContentFromUrl();
     },
 
@@ -608,7 +621,9 @@ const navigationService = {
      * @param {number} chapterIndex Indeks bab.
      */
     goToChapter(seriesId, volumeId, chapterIndex) {
-        history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/${chapterIndex}`);
+        // Memperbarui URL di history
+        // Menghilangkan literal '/volume/' dari URL yang ditampilkan
+        history.pushState(null, '', `/${seriesId}/${volumeId}/chapter/${chapterIndex}`);
         this.loadContentFromUrl();
     }
 };
@@ -642,7 +657,6 @@ const app = {
         } else { // Desktop
             DOMElements.mainContent.classList.remove('main-mobile-full');
             DOMElements.sidebarToggle.style.display = 'none';
-
             if (appState.currentView === 'volume-read' && DOMElements.tocSidebar) {
                 console.log("Desktop: currentView is volume-read AND tocSidebar exists. Showing TOC.");
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
@@ -683,7 +697,7 @@ const app = {
         appState.isTocSidebarOpen = newState;
         
         // Pastikan konten dirender/diperbarui sebelum menerapkan layout
-        uiService.renderDynamicSidebarContent(); 
+        uiService.renderDynamicSidebarContent();
         app.applyLayoutClasses();
     },
 
