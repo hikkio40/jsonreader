@@ -361,6 +361,10 @@ const uiService = {
             </div>
         `;
         uiService.renderContentWithTransition(contentHtml);
+
+        // Gulir ke atas setelah merender konten bab
+        // Menggunakan window.scrollTo untuk memastikan seluruh halaman digulirkan ke atas
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
@@ -446,7 +450,8 @@ const navigationService = {
         uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
 
         // Gulir ke atas setelah merender konten bab
-        DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+        // Baris ini dipindahkan ke uiService.renderChapterContent
+        // DOMElements.mainContent.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
 
