@@ -110,8 +110,9 @@ const dataService = {
         }
     },
 
+    // Mengubah jalur gambar menjadi absolut
     getChapterImagePath(seriesId, volumeId, imageName) {
-        return `images/${seriesId}/${volumeId}/${imageName}`;
+        return `/images/${seriesId}/${volumeId}/${imageName}`; // Ditambahkan '/' di awal
     }
 };
 
@@ -422,7 +423,7 @@ const navigationService = {
             appState.currentChapterIndex = 0;
             uiService.removeTocSidebar();
             app.applyLayoutClasses();
-            const seriesIndex = await dataService.fetchJson('series/series-index.json');
+            const seriesIndex = await dataService.fetchJson('/series/series-index.json'); // Jalur absolut
             if (seriesIndex) uiService.renderHomepageContent(seriesIndex);
         } else if ((match = path.match(chapterReadRegex))) {
             const seriesId = match[1];
@@ -434,7 +435,7 @@ const navigationService = {
             appState.currentVolumeId = volumeId;
             appState.currentChapterIndex = chapterIndex;
 
-            const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
+            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`); // Jalur absolut
             if (!volumeData) return;
 
             appState.currentVolumeChapters = volumeData.bab;
@@ -453,7 +454,7 @@ const navigationService = {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab tidak ditemukan.</div>`;
                 return;
             }
-            const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${chapterInfo.file}`);
+            const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`); // Jalur absolut
             if (chapterData) uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
 
         } else if ((match = path.match(volumeReadRegex))) {
@@ -465,7 +466,7 @@ const navigationService = {
             appState.currentVolumeId = volumeId;
             appState.currentChapterIndex = 0; // Reset chapter index when entering a new volume
 
-            const volumeData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${volumeId}.json`);
+            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`); // Jalur absolut
             if (!volumeData) return;
 
             appState.currentVolumeChapters = volumeData.bab;
@@ -482,7 +483,7 @@ const navigationService = {
             // Render the first chapter of the volume by default
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 const firstChapterInfo = appState.currentVolumeChapters[0];
-                const chapterData = await dataService.fetchJson(`series/${seriesId}/${volumeId}/${firstChapterInfo.file}`);
+                const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${firstChapterInfo.file}`); // Jalur absolut
                 if (chapterData) uiService.renderChapterContent(chapterData, volumeData, 0, appState.currentVolumeChapters.length);
             } else {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-gray-500">Tidak ada bab ditemukan untuk volume ini.</div>`;
@@ -496,8 +497,8 @@ const navigationService = {
             appState.currentChapterIndex = 0;
             uiService.removeTocSidebar();
             app.applyLayoutClasses();
-            const info = await dataService.fetchJson(`series/${seriesId}/info.json`);
-            const volumes = await dataService.fetchJson(`series/${seriesId}/volumes.json`);
+            const info = await dataService.fetchJson(`/series/${seriesId}/info.json`); // Jalur absolut
+            const volumes = await dataService.fetchJson(`/series/${seriesId}/volumes.json`); // Jalur absolut
             if (info && volumes) uiService.renderSeriesDetailContent(info, volumes);
         } else {
             // Fallback to homepage if URL doesn't match any pattern
