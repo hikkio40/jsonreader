@@ -178,12 +178,7 @@ const uiService = {
             }
 
             sidebarContentHtml = `
-                <li class="toc-menu-item">
-                    <a href="#" onclick="navigationService.goToSeriesDetail('${appState.currentSeriesId}'); app.toggleTocSidebar(false); return false;" class="flex items-center">
-                        <span class="material-icons mr-2">arrow_back</span>
-                        Kembali ke Seri
-                    </a>
-                </li>
+                <!-- Tombol "Kembali ke Seri" dihapus dari sini -->
                 <li class="border-t border-gray-200 my-2"></li>
                 ${chaptersHtml}
             `;
