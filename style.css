@@ -38,7 +38,7 @@
 }
 
 #tocSidebar .toc-header {
-    padding: 10px;
+    padding: 15px 0;
     display: flex;
     align-items: center;
     justify-content: space-around;
