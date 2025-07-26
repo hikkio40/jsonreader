@@ -558,16 +558,21 @@ const navigationService = {
                 console.log("DEBUG: -> Chapter data is null or empty. Error message should be displayed by fetchJson.");
             }
 
-        // 2. Periksa URL Volume
+        // 2. Periksa URL Volume (misal: /seriesId/volumeNumber)
         } else if ((match = path.match(URL_REGEX.VOLUME_READ))) {
-            console.log("DEBUG: -> Handling volume read path (redirecting to chapter 0). Match:", match);
+            console.log("DEBUG: -> Handling direct volume URL access. Match:", match);
             const seriesId = match[1];
-            const volumeNumber = parseInt(match[2], 10); // Ambil nomor volume dari URL
-            const volumeId = volumeIdConverter.numberToString(volumeNumber); // Konversi kembali ke 'volumeX'
+            const volumeNumber = parseInt(match[2], 10);
+            const volumeId = volumeIdConverter.numberToString(volumeNumber);
             
-            // Langsung navigasi ke bab 0 dari volume tersebut
-            // Ini akan memanggil loadContentFromUrl lagi, yang akan memproses URL chapter/0
-            navigationService.goToChapter(seriesId, volumeId, 0);
+            // Ganti entri riwayat saat ini dengan URL bab 0 yang lengkap
+            const newChapter0Url = `/${seriesId}/${volumeNumber}/0`;
+            console.log(`DEBUG: Replacing history state to: ${newChapter0Url}`);
+            history.replaceState(null, '', newChapter0Url);
+            
+            // Kemudian, muat konten untuk URL bab 0 yang baru saja diganti
+            // Ini akan memicu loadContentFromUrl lagi, yang akan cocok dengan URL_REGEX.CHAPTER_READ
+            this.loadContentFromUrl();
             return; // Penting: Keluar dari fungsi ini untuk menghindari pemrosesan ganda
 
         // 3. Periksa URL Homepage
@@ -634,16 +639,16 @@ const navigationService = {
      * @param {string} volumeId ID volume (dalam format 'volumeX').
      */
     goToVolume(seriesId, volumeId) {
-        console.log("DEBUG: Navigating to volume (redirecting to chapter 0):", seriesId, volumeId);
+        console.log("DEBUG: Navigating to volume (directly to chapter 0):", seriesId, volumeId);
         const volumeNumber = volumeIdConverter.stringToNumber(volumeId);
         if (volumeNumber === null) {
             console.error("ERROR: Invalid volumeId format for URL construction:", volumeId);
             this.goToHomepage(); // Fallback ke homepage jika format ID volume tidak valid
             return;
         }
-        // URL yang ditampilkan di browser tanpa '/series/' dan dengan nomor volume
-        history.pushState(null, '', `/${seriesId}/${volumeNumber}`);
-        this.loadContentFromUrl();
+        // Langsung navigasi ke bab 0 dari volume tersebut
+        // Ini akan memastikan bahwa halaman detail seri adalah entri sebelumnya di riwayat
+        this.goToChapter(seriesId, volumeId, 0);
     },
 
     /**
