@@ -1,3 +1,9 @@
+html, body {
+    height: 100%; /* Memastikan elemen html dan body mengambil tinggi penuh viewport */
+    margin: 0;
+    padding: 0;
+}
+
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
