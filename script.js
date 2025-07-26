@@ -7,12 +7,13 @@ const DOMElements = {
     overlay: document.getElementById('overlay'),
     tocSidebar: null,
     headerMainNav: document.querySelector('.header-main-nav'),
+    searchInput: document.getElementById('searchInput'), // New: Reference to the search input field
 };
 
 const URL_REGEX = {
-    SERIES_DETAIL: /^\/([a-zA-Z0-9_-]+)$/,
-    VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/(\d+)$/,
-    CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/(\d+)\/(\d+)$/,
+    SERIES_DETAIL: /^([a-zA-Z0-9_-]+)$/,
+    VOLUME_READ: /^([a-zA-Z0-9_-]+)\/(\d+)$/,
+    CHAPTER_READ: /^([a-zA-Z0-9_-]+)\/(\d+)\/(\d+)$/,
 };
 
 const appState = {
@@ -24,6 +25,7 @@ const appState = {
     currentChapterIndex: 0,
     currentVolumeChapters: [],
     currentVolumeData: null,
+    currentSearchTerm: '', // New: Stores the current search term
 };
 
 const debounce = (func, delay) => {
@@ -384,6 +386,47 @@ const uiService = {
         uiService.renderContentWithTransition(contentHtml);
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    // New function to render search results
+    async renderSearchResults(results, searchTerm) {
+        let seriesHtml = '';
+        if (results.length > 0) {
+            results.forEach(series => {
+                let badgeColorClass = '';
+                if (series.format === 'Light Novel') {
+                    badgeColorClass = 'bg-blue-500';
+                } else if (series.format === 'Manga') {
+                    badgeColorClass = 'bg-green-500';
+                } else if (series.format === 'Web Novel') {
+                    badgeColorClass = 'bg-purple-500';
+                } else {
+                    badgeColorClass = 'bg-gray-500';
+                }
+
+                seriesHtml += `
+                    <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.goToSeriesDetail('${series.id}')">
+                        <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
+                            ${series.cover ? `<img src="${dataService.getAbsoluteCoverPath(series.cover)}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>`}
+                            ${series.format ? `<span class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white rounded-full ${badgeColorClass}">${series.format}</span>` : ''}
+                        </div>
+                        <h3 class="text-sm font-medium line-clamp-2 series-title">${series.judul}</h3>
+                    </article>
+                `;
+            });
+        } else {
+            seriesHtml = `<div class="text-center py-10 text-gray-500">Tidak ada hasil ditemukan untuk "${searchTerm}".</div>`;
+        }
+
+        const contentHtml = `
+            <h2 class="text-xl font-semibold mb-8 page-title">Hasil Pencarian untuk "${searchTerm}"</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 series-grid">
+                ${seriesHtml}
+            </div>
+        `;
+        uiService.renderContentWithTransition(contentHtml);
     }
 };
 
@@ -396,11 +439,36 @@ const navigationService = {
     },
 
     async loadContentFromUrl() {
-        const path = window.location.pathname;
+        // Remove leading slash for path matching
+        const path = window.location.pathname.startsWith('/') ? window.location.pathname.substring(1) : window.location.pathname;
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchTerm = urlParams.get('q'); // Get search term from URL
 
         let match;
 
-        if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
+        if (searchTerm) {
+            this._updateAppState('search');
+            appState.currentSearchTerm = searchTerm;
+            // Set the search input value if it exists
+            if (DOMElements.searchInput) {
+                DOMElements.searchInput.value = searchTerm;
+            }
+            const seriesIndex = await dataService.fetchJson('/series/series-index.json');
+            if (seriesIndex) {
+                const filteredSeries = seriesIndex.filter(series =>
+                    series.judul.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    series.penulis.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    series.genre.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                uiService.renderSearchResults(filteredSeries, searchTerm);
+            }
+            appState.isTocSidebarOpen = false;
+            app.applyLayoutClasses();
+        } else if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
+            // Clear search input if navigating away from search results
+            if (DOMElements.searchInput) {
+                DOMElements.searchInput.value = '';
+            }
             const seriesId = match[1];
             const volumeNumber = parseInt(match[2], 10);
             const volumeId = volumeIdConverter.numberToString(volumeNumber);
@@ -434,6 +502,10 @@ const navigationService = {
                 uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
             }
         } else if ((match = path.match(URL_REGEX.VOLUME_READ))) {
+            // Clear search input if navigating away from search results
+            if (DOMElements.searchInput) {
+                DOMElements.searchInput.value = '';
+            }
             const seriesId = match[1];
             const volumeNumber = parseInt(match[2], 10);
             const volumeId = volumeIdConverter.numberToString(volumeNumber);
@@ -443,7 +515,11 @@ const navigationService = {
             
             this.loadContentFromUrl();
             return;
-        } else if (path === '/' || path === '/index.html') {
+        } else if (path === '' || path === 'index.html') { // Handle empty path for homepage
+            // Clear search input if navigating away from search results
+            if (DOMElements.searchInput) {
+                DOMElements.searchInput.value = '';
+            }
             this._updateAppState('home');
             const seriesIndex = await dataService.fetchJson('/series/series-index.json');
             if (seriesIndex) {
@@ -452,6 +528,10 @@ const navigationService = {
             appState.isTocSidebarOpen = false;
             app.applyLayoutClasses();
         } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
+            // Clear search input if navigating away from search results
+            if (DOMElements.searchInput) {
+                DOMElements.searchInput.value = '';
+            }
             const seriesId = match[1];
             this._updateAppState('series-detail', seriesId);
             const info = await dataService.fetchJson(`/series/${seriesId}/info.json`);
@@ -462,6 +542,10 @@ const navigationService = {
             appState.isTocSidebarOpen = false;
             app.applyLayoutClasses();
         } else {
+            // Clear search input for unknown paths and redirect to homepage
+            if (DOMElements.searchInput) {
+                DOMElements.searchInput.value = '';
+            }
             this.goToHomepage();
         }
     },
@@ -492,6 +576,12 @@ const navigationService = {
             return;
         }
         history.pushState(null, '', `/${seriesId}/${volumeNumber}/${chapterIndex}`);
+        this.loadContentFromUrl();
+    },
+
+    // New function to navigate to search results
+    goToSearch(query) {
+        history.pushState(null, '', `/?q=${encodeURIComponent(query)}`);
         this.loadContentFromUrl();
     }
 };
@@ -552,6 +642,17 @@ const app = {
         app.applyLayoutClasses();
     },
 
+    // New function to handle search input
+    handleSearchInput: debounce(function() {
+        const query = DOMElements.searchInput.value.trim();
+        if (query) {
+            navigationService.goToSearch(query);
+        } else {
+            // If search input is cleared, go back to homepage
+            navigationService.goToHomepage();
+        }
+    }, 300), // Debounce for 300ms to limit API calls
+
     setupEventListeners() {
         DOMElements.sidebarToggle.addEventListener('click', () => app.toggleTocSidebar());
         DOMElements.overlay.addEventListener('click', function() {
@@ -574,12 +675,24 @@ const app = {
             }
         });
 
+        // New event listeners for search input
+        if (DOMElements.searchInput) {
+            DOMElements.searchInput.addEventListener('input', app.handleSearchInput);
+            DOMElements.searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    app.handleSearchInput();
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             app.checkMobile();
             const currentPath = window.location.pathname;
+            // Normalize path for initial load if it's not root or index.html
+            // This ensures consistent behavior with how URL_REGEX expects paths
             if (currentPath !== '/' && currentPath !== '/index.html') {
-                history.replaceState(null, '', '/');
-                history.pushState(null, '', currentPath);
+                history.replaceState(null, '', '/'); // Replace current history entry with root
+                history.pushState(null, '', currentPath); // Push the actual path back
             }
             navigationService.loadContentFromUrl();
         });
