@@ -91,40 +91,40 @@ const dataService = {
         const cacheKey = path;
         let cachedData = this.getCache(cacheKey);
 
-        console.log(`Mencoba mengambil data dari jaringan untuk: ${path} (mengizinkan cache HTTP browser)`);
+        console.log(`DEBUG: Mencoba mengambil data dari jaringan untuk: ${path} (mengizinkan cache HTTP browser)`);
         try {
             // Mengizinkan browser untuk menggunakan mekanisme cache HTTP standar (ETag, Last-Modified)
             const response = await fetch(path); 
             
-            console.log("Fetch response details for:", path);
-            console.log("Response URL:", response.url);
-            console.log("Response Status:", response.status);
-            console.log("Response OK:", response.ok);
-            console.log("Response Content-Type:", response.headers.get('Content-Type'));
+            console.log("DEBUG: Fetch response details for:", path);
+            console.log("DEBUG: Response URL:", response.url);
+            console.log("DEBUG: Response Status:", response.status);
+            console.log("DEBUG: Response OK:", response.ok);
+            console.log("DEBUG: Response Content-Type:", response.headers.get('Content-Type'));
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error(`Respons tidak OK untuk ${path}. Status: ${response.status}. Teks respons: ${errorText.substring(0, 200)}...`);
+                console.error(`ERROR: Respons tidak OK untuk ${path}. Status: ${response.status}. Teks respons: ${errorText.substring(0, 200)}...`);
                 throw new Error(`Failed to load ${path}: ${response.statusText}`);
             }
 
             const contentType = response.headers.get('Content-Type');
             if (!contentType || !contentType.includes('application/json')) {
                 const responseText = await response.text();
-                console.error(`Respons bukan JSON untuk ${path}. Content-Type: ${contentType}. Teks respons awal: ${responseText.substring(0, 200)}...`);
+                console.error(`ERROR: Respons bukan JSON untuk ${path}. Content-Type: ${contentType}. Teks respons awal: ${responseText.substring(0, 200)}...`);
                 throw new Error(`Expected JSON but received ${contentType || 'unknown type'}`);
             }
 
             const data = await response.json();
             this.setCache(cacheKey, data);
-            console.log(`Berhasil mengambil data terbaru dari jaringan untuk: ${path}`);
+            console.log(`DEBUG: Berhasil mengambil data terbaru dari jaringan untuk: ${path}`);
             return data;
 
         } catch (error) {
-            console.error(`Gagal mengambil data dari jaringan untuk ${path}. Mencoba menggunakan cache lokal sebagai fallback:`, error);
+            console.error(`ERROR: Gagal mengambil data dari jaringan untuk ${path}. Mencoba menggunakan cache lokal sebagai fallback:`, error);
             
             if (cachedData && cachedData.data) {
-                console.log(`Menggunakan data dari cache lokal (sebagai fallback) untuk: ${path}`);
+                console.log(`DEBUG: Menggunakan data dari cache lokal (sebagai fallback) untuk: ${path}`);
                 return cachedData.data;
             } else {
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia atau gagal dimuat. Silakan coba lagi nanti atau hubungi administrator.</div>`;
@@ -167,9 +167,11 @@ const uiService = {
      * @param {string} contentHtml HTML konten yang akan dirender.
      */
     async renderContentWithTransition(contentHtml) {
+        console.log("DEBUG: renderContentWithTransition called. Adding fade-out class.");
         DOMElements.dynamicContent.classList.add('fade-out');
         await new Promise(resolve => setTimeout(resolve, 300));
         DOMElements.dynamicContent.innerHTML = contentHtml;
+        console.log("DEBUG: dynamicContent innerHTML updated. Removing fade-out class.");
         DOMElements.dynamicContent.classList.remove('fade-out');
     },
 
@@ -178,7 +180,7 @@ const uiService = {
      */
     renderDynamicSidebarContent() {
         if (!DOMElements.tocSidebar) {
-            console.log("Creating tocSidebar DOM element."); // Log tambahan
+            console.log("DEBUG: Creating tocSidebar DOM element."); // Log tambahan
             const tocSidebarElement = document.createElement('aside');
             tocSidebarElement.id = 'tocSidebar';
             tocSidebarElement.classList.add('app-sidebar', 'toc-sidebar-hidden');
@@ -198,7 +200,7 @@ const uiService = {
         if (appState.currentView === 'volume-read') {
             sidebarTitle = 'Daftar Isi Volume';
             let chaptersHtml = '';
-            console.log("Rendering sidebar for volume-read. currentVolumeChapters:", appState.currentVolumeChapters); // Log tambahan untuk debugging
+            console.log("DEBUG: Rendering sidebar for volume-read. currentVolumeChapters:", appState.currentVolumeChapters); // Log tambahan untuk debugging
             if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
                 appState.currentVolumeChapters.forEach((chapter, index) => {
                     const isActive = index === appState.currentChapterIndex ? 'active' : '';
@@ -469,12 +471,12 @@ const navigationService = {
      * @param {number|null} chapterIndex Indeks bab (opsional).
      */
     _updateAppState(view, seriesId = null, volumeId = null, chapterIndex = 0) {
-        console.log("Entering _updateAppState. Proposed view:", view, "isMobile:", appState.isMobile);
+        console.log("DEBUG: Entering _updateAppState. Proposed view:", view, "isMobile:", appState.isMobile);
         appState.currentView = view;
         appState.currentSeriesId = seriesId;
         appState.currentVolumeId = volumeId;
         appState.currentChapterIndex = chapterIndex;
-        console.log("Exiting _updateAppState. Current appState:", appState);
+        console.log("DEBUG: Exiting _updateAppState. Current appState:", appState);
     },
 
     /**
@@ -482,17 +484,24 @@ const navigationService = {
      */
     async loadContentFromUrl() {
         const path = window.location.pathname;
-        console.log("Loading content from URL:", path);
+        console.log("DEBUG: loadContentFromUrl called for path:", path);
 
         let match;
 
         if (path === '/' || path === '/index.html') {
+            console.log("DEBUG: -> Handling homepage path.");
             this._updateAppState('home');
             const seriesIndex = await dataService.fetchJson('/series/series-index.json');
-            if (seriesIndex) uiService.renderHomepageContent(seriesIndex);
+            if (seriesIndex) {
+                console.log("DEBUG: -> Homepage seriesIndex fetched, rendering content.");
+                uiService.renderHomepageContent(seriesIndex);
+            } else {
+                console.log("DEBUG: -> Homepage seriesIndex is null or empty. Error message should be displayed by fetchJson.");
+            }
             appState.isTocSidebarOpen = false; // Pastikan TOC tertutup di halaman beranda
             app.applyLayoutClasses(); // Terapkan layout
         } else if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
+            console.log("DEBUG: -> Handling chapter read path. Match:", match);
             const seriesId = match[1];
             const volumeId = match[2];
             const chapterIndex = parseInt(match[3], 10);
@@ -501,6 +510,7 @@ const navigationService = {
 
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) {
+                console.log("DEBUG: -> Volume data is null, hiding TOC. Error message should be displayed by fetchJson.");
                 appState.isTocSidebarOpen = false; // Sembunyikan TOC jika data volume gagal dimuat
                 app.applyLayoutClasses(); // Terapkan layout
                 return;
@@ -517,58 +527,47 @@ const navigationService = {
             
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
             if (!chapterInfo) {
+                console.log("DEBUG: -> Chapter info not found for index:", chapterIndex);
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab tidak ditemukan.</div>`;
                 appState.isTocSidebarOpen = false; // Sembunyikan TOC jika bab tidak ditemukan
                 app.applyLayoutClasses(); // Terapkan layout
                 return;
             }
             const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`);
-            if (chapterData) uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
+            if (chapterData) {
+                console.log("DEBUG: -> Chapter data fetched, rendering content.");
+                uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
+            } else {
+                console.log("DEBUG: -> Chapter data is null or empty. Error message should be displayed by fetchJson.");
+            }
 
         } else if ((match = path.match(URL_REGEX.VOLUME_READ))) {
+            console.log("DEBUG: -> Handling volume read path (redirecting to chapter 0). Match:", match);
             const seriesId = match[1];
             const volumeId = match[2];
 
             // Ketika URL hanya sampai volume, kita navigasi ke bab 0 dan perbarui URL
-            this._updateAppState('volume-read', seriesId, volumeId, 0); // Default ke bab 0
-            history.replaceState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/0`); // Perbarui URL tanpa menambah entri history
-
-            const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
-            if (!volumeData) {
-                appState.isTocSidebarOpen = false; // Sembunyikan TOC jika data volume gagal dimuat
-                app.applyLayoutClasses(); // Terapkan layout
-                return;
-            }
-
-            appState.currentVolumeChapters = volumeData.bab;
-            appState.currentVolumeData = volumeData;
-
-            // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
-            uiService.renderDynamicSidebarContent(); 
-            // Hanya buka sidebar secara otomatis di desktop
-            appState.isTocSidebarOpen = !appState.isMobile; 
-            app.applyLayoutClasses(); // Terapkan kelas layout untuk menampilkan sidebar
-
-            if (appState.currentVolumeChapters && appState.currentVolumeChapters.length > 0) {
-                const firstChapterInfo = appState.currentVolumeChapters[0];
-                const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${firstChapterInfo.file}`);
-                if (chapterData) uiService.renderChapterContent(chapterData, volumeData, 0, appState.currentVolumeChapters.length);
-            } else {
-                DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-gray-500">Tidak ada bab ditemukan untuk volume ini.</div>`;
-                appState.isTocSidebarOpen = false; // Sembunyikan TOC jika tidak ada bab
-                app.applyLayoutClasses(); // Terapkan layout
-            }
+            // Hapus history.replaceState di sini untuk menghindari masalah riwayat ganda
+            // Cukup panggil goToChapter untuk menangani navigasi dan pemuatan konten
+            navigationService.goToChapter(seriesId, volumeId, 0);
+            return; // Penting: Keluar dari fungsi ini untuk menghindari pemrosesan ganda
 
         } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
+            console.log("DEBUG: -> Handling series detail path. Match:", match);
             const seriesId = match[1];
             this._updateAppState('series-detail', seriesId);
             const info = await dataService.fetchJson(`/series/${seriesId}/info.json`);
             const volumes = await dataService.fetchJson(`/series/${seriesId}/volumes.json`);
-            if (info && volumes) uiService.renderSeriesDetailContent(info, volumes);
+            if (info && volumes) {
+                console.log("DEBUG: -> Series info and volumes fetched, rendering content.");
+                uiService.renderSeriesDetailContent(info, volumes);
+            } else {
+                console.log("DEBUG: -> Series info or volumes are null/empty. Error message should be displayed by fetchJson.");
+            }
             appState.isTocSidebarOpen = false; // Pastikan TOC tertutup di halaman detail seri
             app.applyLayoutClasses(); // Terapkan layout
         } else {
-            console.warn("URL tidak dikenal, mengarahkan ke beranda:", path);
+            console.warn("DEBUG: URL tidak dikenal, mengarahkan ke beranda:", path);
             this.goToHomepage(); // Gunakan goToHomepage untuk mendorong URL yang benar
         }
     },
@@ -577,6 +576,7 @@ const navigationService = {
      * Navigasi ke halaman beranda.
      */
     goToHomepage() {
+        console.log("DEBUG: Navigating to homepage.");
         history.pushState(null, '', '/');
         this.loadContentFromUrl();
     },
@@ -586,6 +586,7 @@ const navigationService = {
      * @param {string} seriesId ID seri.
      */
     goToSeriesDetail(seriesId) {
+        console.log("DEBUG: Navigating to series detail:", seriesId);
         history.pushState(null, '', `/series/${seriesId}`);
         this.loadContentFromUrl();
     },
@@ -596,9 +597,10 @@ const navigationService = {
      * @param {string} volumeId ID volume.
      */
     goToVolume(seriesId, volumeId) {
+        console.log("DEBUG: Navigating to volume (redirecting to chapter 0):", seriesId, volumeId);
         // Langsung navigasi ke bab 0 dari volume tersebut
-        history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/0`);
-        this.loadContentFromUrl();
+        // Ini akan memanggil loadContentFromUrl lagi, yang akan memproses URL chapter/0
+        this.goToChapter(seriesId, volumeId, 0);
     },
 
     /**
@@ -608,6 +610,7 @@ const navigationService = {
      * @param {number} chapterIndex Indeks bab.
      */
     goToChapter(seriesId, volumeId, chapterIndex) {
+        console.log("DEBUG: Navigating to chapter:", seriesId, volumeId, chapterIndex);
         history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/${chapterIndex}`);
         this.loadContentFromUrl();
     }
@@ -619,7 +622,7 @@ const app = {
      * Menerapkan kelas layout berdasarkan status mobile/desktop dan sidebar.
      */
     applyLayoutClasses() {
-        console.log("applyLayoutClasses called. appState.isMobile:", appState.isMobile, "appState.currentView:", appState.currentView, "appState.isTocSidebarOpen:", appState.isTocSidebarOpen, "DOMElements.tocSidebar:", DOMElements.tocSidebar);
+        console.log("DEBUG: applyLayoutClasses called. appState.isMobile:", appState.isMobile, "appState.currentView:", appState.currentView, "appState.isTocSidebarOpen:", appState.isTocSidebarOpen, "DOMElements.tocSidebar:", DOMElements.tocSidebar);
 
         // Reset default styles/classes first to ensure clean state
         DOMElements.mainContent.style.marginLeft = '0';
@@ -644,13 +647,13 @@ const app = {
             DOMElements.sidebarToggle.style.display = 'none';
 
             if (appState.currentView === 'volume-read' && DOMElements.tocSidebar) {
-                console.log("Desktop: currentView is volume-read AND tocSidebar exists. Showing TOC.");
+                console.log("DEBUG: Desktop: currentView is volume-read AND tocSidebar exists. Showing TOC.");
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
                 DOMElements.mainContent.style.marginLeft = '256px';
                 DOMElements.mainAppHeader.style.left = '256px';
                 document.body.classList.add('toc-active');
             } else {
-                console.log("Desktop: Not volume-read or no TOC sidebar, hiding TOC.");
+                console.log("DEBUG: Desktop: Not volume-read or no TOC sidebar, hiding TOC.");
                 if (DOMElements.tocSidebar) { // Only hide if it exists
                     DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
                 }
@@ -664,6 +667,7 @@ const app = {
     checkMobile() {
         const wasMobile = appState.isMobile;
         appState.isMobile = window.innerWidth < 768;
+        console.log(`DEBUG: checkMobile called. Was mobile: ${wasMobile}, Now mobile: ${appState.isMobile}`);
 
         if (wasMobile !== appState.isMobile) {
             app.applyLayoutClasses();
@@ -681,6 +685,7 @@ const app = {
     toggleTocSidebar(forceState = null) {
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
         appState.isTocSidebarOpen = newState;
+        console.log(`DEBUG: toggleTocSidebar called. New state: ${newState}, isMobile: ${appState.isMobile}`);
         
         // Pastikan konten dirender/diperbarui sebelum menerapkan layout
         uiService.renderDynamicSidebarContent(); 
@@ -691,6 +696,7 @@ const app = {
      * Menyiapkan semua event listener aplikasi.
      */
     setupEventListeners() {
+        console.log("DEBUG: setupEventListeners called.");
         DOMElements.sidebarToggle.addEventListener('click', () => app.toggleTocSidebar());
         DOMElements.overlay.addEventListener('click', function() {
             if (appState.isMobile) {
@@ -699,7 +705,12 @@ const app = {
         });
 
         window.addEventListener('resize', debounce(app.checkMobile, 200));
-        window.addEventListener('popstate', navigationService.loadContentFromUrl);
+        
+        // Tambahkan log langsung ke popstate listener
+        window.addEventListener('popstate', (event) => {
+            console.log("DEBUG: popstate event fired!", event.state, "Current Path:", window.location.pathname);
+            navigationService.loadContentFromUrl();
+        });
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
@@ -710,20 +721,24 @@ const app = {
         });
 
         document.addEventListener('DOMContentLoaded', function() {
+            console.log("DEBUG: DOMContentLoaded fired.");
             app.checkMobile();
             const currentPath = window.location.pathname;
             // Jika pengguna langsung mengakses tautan dalam (bukan homepage)
             if (currentPath !== '/' && currentPath !== '/index.html') {
+                console.log(`DEBUG: Initial deep link detected: ${currentPath}. Adjusting history.`);
                 // Ganti entri riwayat saat ini dengan homepage, sehingga tombol kembali akan menuju homepage
                 history.replaceState(null, '', '/');
                 // Kemudian, dorong tautan dalam yang sebenarnya ke riwayat
                 history.pushState(null, '', currentPath);
             }
             // Muat konten untuk URL saat ini (baik homepage atau tautan dalam yang baru didorong)
+            console.log("DEBUG: Calling loadContentFromUrl on DOMContentLoaded.");
             navigationService.loadContentFromUrl();
         });
     }
 };
 
 // INISIALISASI APLIKASI
+console.log("DEBUG: App initialization started.");
 app.setupEventListeners();
