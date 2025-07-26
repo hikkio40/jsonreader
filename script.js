@@ -11,10 +11,14 @@ const DOMElements = {
 };
 
 // Pola Regex untuk URL navigasi
+// Diperbarui untuk permalink yang lebih bersih: /seriesId/volumeNumber/chapterIndex
 const URL_REGEX = {
-    SERIES_DETAIL: /^\/series\/([a-zA-Z0-9_-]+)$/,
-    VOLUME_READ: /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)$/,
-    CHAPTER_READ: /^\/series\/([a-zA-Z0-9_-]+)\/volume\/([a-zA-Z0-9_-]+)\/chapter\/(\d+)$/,
+    // Contoh: /thegirlwhowantstobeahero
+    SERIES_DETAIL: /^\/([a-zA-Z0-9_-]+)$/,
+    // Contoh: /thegirlwhowantstobeahero/1 (volume 1)
+    VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/(\d+)$/, // seriesId, volumeNumber
+    // Contoh: /thegirlwhowantstobeahero/1/0 (volume 1, chapter 0)
+    CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/(\d+)\/(\d+)$/, // seriesId, volumeNumber, chapterIndex
 };
 
 // MANAJEMEN STATUS APLIKASI
@@ -23,7 +27,7 @@ const appState = {
     isTocSidebarOpen: false, // Melacak apakah sidebar dinamis tunggal terbuka
     currentView: 'home', // 'home', 'series-detail', 'volume-read'
     currentSeriesId: null,
-    currentVolumeId: null,
+    currentVolumeId: null, // Ini akan tetap dalam format 'volumeX' untuk konsistensi data
     currentChapterIndex: 0,
     currentVolumeChapters: [],
     currentVolumeData: null,
@@ -37,6 +41,27 @@ const debounce = (func, delay) => {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(context, args), delay); // Memperbaiki bug: menggunakan args
     };
+};
+
+// Helper function untuk mengonversi ID volume antara string (misal: "volume1") dan angka (misal: 1)
+const volumeIdConverter = {
+    /**
+     * Mengonversi ID volume string (misal: "volume1") ke bagian numeriknya (misal: 1).
+     * @param {string} volumeStringId - ID volume string (misal: "volume1").
+     * @returns {number|null} Bagian numerik, atau null jika format tidak valid.
+     */
+    stringToNumber: (volumeStringId) => {
+        const match = volumeStringId.match(/^volume(\d+)$/);
+        return match ? parseInt(match[1], 10) : null;
+    },
+    /**
+     * Mengonversi nomor volume (misal: 1) kembali ke format ID string (misal: "volume1").
+     * @param {number} volumeNumber - Bagian numerik dari ID volume.
+     * @returns {string} ID volume string (misal: "volume1").
+     */
+    numberToString: (volumeNumber) => {
+        return `volume${volumeNumber}`;
+    }
 };
 
 // LAYANAN DATA (FETCHING & CACHING)
@@ -136,11 +161,12 @@ const dataService = {
     /**
      * Mengembalikan jalur gambar bab yang absolut.
      * @param {string} seriesId ID seri.
-     * @param {string} volumeId ID volume.
+     * @param {string} volumeId ID volume (dalam format 'volumeX').
      * @param {string} imageName Nama file gambar.
      * @returns {string} Jalur absolut ke gambar bab.
      */
     getChapterImagePath(seriesId, volumeId, imageName) {
+        // Jalur gambar tetap menggunakan struktur '/images/seriesId/volumeId/imageName'
         return `/images/${seriesId}/${volumeId}/${imageName}`;
     },
 
@@ -467,7 +493,7 @@ const navigationService = {
      * Memperbarui appState berdasarkan perubahan navigasi.
      * @param {string} view Nama tampilan baru ('home', 'series-detail', 'volume-read').
      * @param {string|null} seriesId ID seri (opsional).
-     * @param {string|null} volumeId ID volume (opsional).
+     * @param {string|null} volumeId ID volume (opsional, dalam format 'volumeX').
      * @param {number|null} chapterIndex Indeks bab (opsional).
      */
     _updateAppState(view, seriesId = null, volumeId = null, chapterIndex = 0) {
@@ -488,26 +514,18 @@ const navigationService = {
 
         let match;
 
-        if (path === '/' || path === '/index.html') {
-            console.log("DEBUG: -> Handling homepage path.");
-            this._updateAppState('home');
-            const seriesIndex = await dataService.fetchJson('/series/series-index.json');
-            if (seriesIndex) {
-                console.log("DEBUG: -> Homepage seriesIndex fetched, rendering content.");
-                uiService.renderHomepageContent(seriesIndex);
-            } else {
-                console.log("DEBUG: -> Homepage seriesIndex is null or empty. Error message should be displayed by fetchJson.");
-            }
-            appState.isTocSidebarOpen = false; // Pastikan TOC tertutup di halaman beranda
-            app.applyLayoutClasses(); // Terapkan layout
-        } else if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
+        // PRIORITAS PENTING: Periksa URL paling spesifik terlebih dahulu
+        // 1. Periksa URL Bab (paling spesifik)
+        if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
             console.log("DEBUG: -> Handling chapter read path. Match:", match);
             const seriesId = match[1];
-            const volumeId = match[2];
+            const volumeNumber = parseInt(match[2], 10); // Ambil nomor volume dari URL
+            const volumeId = volumeIdConverter.numberToString(volumeNumber); // Konversi kembali ke 'volumeX'
             const chapterIndex = parseInt(match[3], 10);
             
             this._updateAppState('volume-read', seriesId, volumeId, chapterIndex);
 
+            // Jalur pengambilan data JSON di server tetap menggunakan '/series/' dan ID volume string
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) {
                 console.log("DEBUG: -> Volume data is null, hiding TOC. Error message should be displayed by fetchJson.");
@@ -519,11 +537,9 @@ const navigationService = {
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
             
-            // Panggil renderDynamicSidebarContent di sini setelah appState.currentVolumeChapters diisi
             uiService.renderDynamicSidebarContent(); 
-            // Hanya buka sidebar secara otomatis di desktop
             appState.isTocSidebarOpen = !appState.isMobile; 
-            app.applyLayoutClasses(); // Terapkan kelas layout untuk menampilkan sidebar
+            app.applyLayoutClasses();
             
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
             if (!chapterInfo) {
@@ -533,6 +549,7 @@ const navigationService = {
                 app.applyLayoutClasses(); // Terapkan layout
                 return;
             }
+            // Jalur pengambilan data JSON di server tetap menggunakan '/series/' dan ID volume string
             const chapterData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${chapterInfo.file}`);
             if (chapterData) {
                 console.log("DEBUG: -> Chapter data fetched, rendering content.");
@@ -541,21 +558,39 @@ const navigationService = {
                 console.log("DEBUG: -> Chapter data is null or empty. Error message should be displayed by fetchJson.");
             }
 
+        // 2. Periksa URL Volume
         } else if ((match = path.match(URL_REGEX.VOLUME_READ))) {
             console.log("DEBUG: -> Handling volume read path (redirecting to chapter 0). Match:", match);
             const seriesId = match[1];
-            const volumeId = match[2];
-
-            // Ketika URL hanya sampai volume, kita navigasi ke bab 0 dan perbarui URL
-            // Hapus history.replaceState di sini untuk menghindari masalah riwayat ganda
-            // Cukup panggil goToChapter untuk menangani navigasi dan pemuatan konten
+            const volumeNumber = parseInt(match[2], 10); // Ambil nomor volume dari URL
+            const volumeId = volumeIdConverter.numberToString(volumeNumber); // Konversi kembali ke 'volumeX'
+            
+            // Langsung navigasi ke bab 0 dari volume tersebut
+            // Ini akan memanggil loadContentFromUrl lagi, yang akan memproses URL chapter/0
             navigationService.goToChapter(seriesId, volumeId, 0);
             return; // Penting: Keluar dari fungsi ini untuk menghindari pemrosesan ganda
 
+        // 3. Periksa URL Homepage
+        } else if (path === '/' || path === '/index.html') {
+            console.log("DEBUG: -> Handling homepage path.");
+            this._updateAppState('home');
+            // Jalur pengambilan data JSON di server tetap menggunakan '/series/series-index.json'
+            const seriesIndex = await dataService.fetchJson('/series/series-index.json');
+            if (seriesIndex) {
+                console.log("DEBUG: -> Homepage seriesIndex fetched, rendering content.");
+                uiService.renderHomepageContent(seriesIndex);
+            } else {
+                console.log("DEBUG: -> Homepage seriesIndex is null or empty. Error message should be displayed by fetchJson.");
+            }
+            appState.isTocSidebarOpen = false; // Pastikan TOC tertutup di halaman beranda
+            app.applyLayoutClasses(); // Terapkan layout
+
+        // 4. Periksa URL Detail Seri (paling tidak spesifik di antara rute dinamis)
         } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
             console.log("DEBUG: -> Handling series detail path. Match:", match);
             const seriesId = match[1];
             this._updateAppState('series-detail', seriesId);
+            // Jalur pengambilan data JSON di server tetap menggunakan '/series/'
             const info = await dataService.fetchJson(`/series/${seriesId}/info.json`);
             const volumes = await dataService.fetchJson(`/series/${seriesId}/volumes.json`);
             if (info && volumes) {
@@ -567,6 +602,7 @@ const navigationService = {
             appState.isTocSidebarOpen = false; // Pastikan TOC tertutup di halaman detail seri
             app.applyLayoutClasses(); // Terapkan layout
         } else {
+            // Fallback untuk URL yang tidak dikenal (misalnya, aset statis yang tidak ada atau salah ketik)
             console.warn("DEBUG: URL tidak dikenal, mengarahkan ke beranda:", path);
             this.goToHomepage(); // Gunakan goToHomepage untuk mendorong URL yang benar
         }
@@ -587,36 +623,51 @@ const navigationService = {
      */
     goToSeriesDetail(seriesId) {
         console.log("DEBUG: Navigating to series detail:", seriesId);
-        history.pushState(null, '', `/series/${seriesId}`);
+        // URL yang ditampilkan di browser tanpa '/series/'
+        history.pushState(null, '', `/${seriesId}`);
         this.loadContentFromUrl();
     },
 
     /**
      * Navigasi ke halaman volume.
      * @param {string} seriesId ID seri.
-     * @param {string} volumeId ID volume.
+     * @param {string} volumeId ID volume (dalam format 'volumeX').
      */
     goToVolume(seriesId, volumeId) {
         console.log("DEBUG: Navigating to volume (redirecting to chapter 0):", seriesId, volumeId);
-        // Langsung navigasi ke bab 0 dari volume tersebut
-        // Ini akan memanggil loadContentFromUrl lagi, yang akan memproses URL chapter/0
-        this.goToChapter(seriesId, volumeId, 0);
+        const volumeNumber = volumeIdConverter.stringToNumber(volumeId);
+        if (volumeNumber === null) {
+            console.error("ERROR: Invalid volumeId format for URL construction:", volumeId);
+            this.goToHomepage(); // Fallback ke homepage jika format ID volume tidak valid
+            return;
+        }
+        // URL yang ditampilkan di browser tanpa '/series/' dan dengan nomor volume
+        history.pushState(null, '', `/${seriesId}/${volumeNumber}`);
+        this.loadContentFromUrl();
     },
 
     /**
      * Navigasi ke halaman bab.
      * @param {string} seriesId ID seri.
-     * @param {string} volumeId ID volume.
+     * @param {string} volumeId ID volume (dalam format 'volumeX').
      * @param {number} chapterIndex Indeks bab.
      */
     goToChapter(seriesId, volumeId, chapterIndex) {
         console.log("DEBUG: Navigating to chapter:", seriesId, volumeId, chapterIndex);
-        history.pushState(null, '', `/series/${seriesId}/volume/${volumeId}/chapter/${chapterIndex}`);
+        const volumeNumber = volumeIdConverter.stringToNumber(volumeId);
+        if (volumeNumber === null) {
+            console.error("ERROR: Invalid volumeId format for URL construction:", volumeId);
+            this.goToHomepage(); // Fallback ke homepage jika format ID volume tidak valid
+            return;
+        }
+        // URL yang ditampilkan di browser tanpa '/series/' dan dengan nomor volume/chapter
+        history.pushState(null, '', `/${seriesId}/${volumeNumber}/${chapterIndex}`);
         this.loadContentFromUrl();
     }
 };
 
 // FUNGSI UTAMA APLIKASI
+console.log("DEBUG: App initialization started.");
 const app = {
     /**
      * Menerapkan kelas layout berdasarkan status mobile/desktop dan sidebar.
@@ -740,5 +791,4 @@ const app = {
 };
 
 // INISIALISASI APLIKASI
-console.log("DEBUG: App initialization started.");
 app.setupEventListeners();
