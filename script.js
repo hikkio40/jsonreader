@@ -711,6 +711,15 @@ const app = {
 
         document.addEventListener('DOMContentLoaded', function() {
             app.checkMobile();
+            const currentPath = window.location.pathname;
+            // Jika pengguna langsung mengakses tautan dalam (bukan homepage)
+            if (currentPath !== '/' && currentPath !== '/index.html') {
+                // Ganti entri riwayat saat ini dengan homepage, sehingga tombol kembali akan menuju homepage
+                history.replaceState(null, '', '/');
+                // Kemudian, dorong tautan dalam yang sebenarnya ke riwayat
+                history.pushState(null, '', currentPath);
+            }
+            // Muat konten untuk URL saat ini (baik homepage atau tautan dalam yang baru didorong)
             navigationService.loadContentFromUrl();
         });
     }
