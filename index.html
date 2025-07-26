@@ -18,12 +18,19 @@
                 </button>
                 <h1 id="mainTitle" class="text-xl font-semibold ml-4 md:ml-0">Json Library</h1>
             </div>
-            <!-- Navigasi Dummy di Kanan -->
-            <nav class="hidden md:flex space-x-4 header-main-nav">
-                <a href="#" class="text-gray-600 hover:text-black">Tentang</a>
-                <a href="#" class="text-gray-600 hover:text-black">Kontak</a>
-                <a href="#" class="text-gray-600 hover:text-black">Kebijakan Privasi</a>
-            </nav>
+            <!-- Navigasi Utama dan Kotak Pencarian -->
+            <div class="flex items-center space-x-4">
+                <nav class="hidden md:flex space-x-4 header-main-nav">
+                    <a href="#" class="text-gray-600 hover:text-black">Tentang</a>
+                    <a href="#" class="text-gray-600 hover:text-black">Kontak</a>
+                    <a href="#" class="text-gray-600 hover:text-black">Kebijakan Privasi</a>
+                </nav>
+                <!-- Kotak Pencarian -->
+                <div class="relative">
+                    <input type="text" placeholder="Cari..." class="pl-3 pr-10 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-32 md:w-48">
+                    <span class="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                </div>
+            </div>
         </div>
     </header>
 
