@@ -7,14 +7,12 @@ const DOMElements = {
     overlay: document.getElementById('overlay'),
     tocSidebar: null,
     headerMainNav: document.querySelector('.header-main-nav'),
-    searchInput: document.getElementById('searchInput'),
-    searchResultsContainer: document.getElementById('searchResultsContainer'), // New: Reference to the search results container
 };
 
 const URL_REGEX = {
-    SERIES_DETAIL: /^([a-zA-Z0-9_-]+)$/,
-    VOLUME_READ: /^([a-zA-Z0-9_-]+)\/(\d+)$/,
-    CHAPTER_READ: /^([a-zA-Z0-9_-]+)\/(\d+)\/(\d+)$/,
+    SERIES_DETAIL: /^\/([a-zA-Z0-9_-]+)$/,
+    VOLUME_READ: /^\/([a-zA-Z0-9_-]+)\/(\d+)$/,
+    CHAPTER_READ: /^\/([a-zA-Z0-9_-]+)\/(\d+)\/(\d+)$/,
 };
 
 const appState = {
@@ -26,7 +24,6 @@ const appState = {
     currentChapterIndex: 0,
     currentVolumeChapters: [],
     currentVolumeData: null,
-    currentSearchTerm: '',
 };
 
 const debounce = (func, delay) => {
@@ -102,7 +99,6 @@ const dataService = {
             if (cachedData && cachedData.data) {
                 return cachedData.data;
             } else {
-                // If there's no cached data and fetch fails, display an error message
                 DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia atau gagal dimuat. Silakan coba lagi nanti atau hubungi administrator.</div>`;
                 return null;
             }
@@ -130,8 +126,6 @@ const uiService = {
         await new Promise(resolve => setTimeout(resolve, 300));
         DOMElements.dynamicContent.innerHTML = contentHtml;
         DOMElements.dynamicContent.classList.remove('fade-out');
-        // Hide search results when main content is rendered
-        DOMElements.searchResultsContainer.classList.add('hidden');
     },
 
     renderDynamicSidebarContent() {
@@ -390,51 +384,6 @@ const uiService = {
         uiService.renderContentWithTransition(contentHtml);
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-
-    // Modified function to render search results in the new container
-    async renderSearchResults(results, searchTerm) {
-        let seriesHtml = '';
-        if (results.length > 0) {
-            results.forEach(series => {
-                let badgeColorClass = '';
-                if (series.format === 'Light Novel') {
-                    badgeColorClass = 'bg-blue-500';
-                } else if (series.format === 'Manga') {
-                    badgeColorClass = 'bg-green-500';
-                } else if (series.format === 'Web Novel') {
-                    badgeColorClass = 'bg-purple-500';
-                } else {
-                    badgeColorClass = 'bg-gray-500';
-                }
-
-                seriesHtml += `
-                    <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.goToSeriesDetail('${series.id}'); app.clearSearch();">
-                        <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
-                            ${series.cover ? `<img src="${dataService.getAbsoluteCoverPath(series.cover)}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>`}
-                            ${series.format ? `<span class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white rounded-full ${badgeColorClass}">${series.format}</span>` : ''}
-                        </div>
-                        <h3 class="text-sm font-medium line-clamp-2 series-title">${series.judul}</h3>
-                    </article>
-                `;
-            });
-        } else {
-            seriesHtml = `<div class="text-center py-10 text-gray-500">Tidak ada hasil ditemukan untuk "${searchTerm}".</div>`;
-        }
-
-        const contentHtml = `
-            <h2 class="text-xl font-semibold mb-8 page-title">Hasil Pencarian untuk "${searchTerm}"</h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 series-grid">
-                ${seriesHtml}
-            </div>
-        `;
-        
-        // Render into the new search results container
-        DOMElements.searchResultsContainer.innerHTML = contentHtml;
-        DOMElements.searchResultsContainer.classList.remove('hidden');
-        DOMElements.dynamicContent.classList.add('hidden'); // Hide main content
     }
 };
 
@@ -447,21 +396,11 @@ const navigationService = {
     },
 
     async loadContentFromUrl() {
-        // Remove leading slash for path matching
-        const path = window.location.pathname.startsWith('/') ? window.location.pathname.substring(1) : window.location.pathname;
-        // No longer using URL params for search, so remove this line:
-        // const urlParams = new URLSearchParams(window.location.search);
-        // const searchTerm = urlParams.get('q'); 
+        const path = window.location.pathname;
 
         let match;
 
-        // --- Removed URL-based search logic from here ---
-        // The search functionality will now be handled by handleSearchInput and renderSearchResults directly
-        // without relying on URL parameters for search results display.
-
         if ((match = path.match(URL_REGEX.CHAPTER_READ))) {
-            // Clear search results and input when navigating to a chapter
-            app.clearSearch(); 
             const seriesId = match[1];
             const volumeNumber = parseInt(match[2], 10);
             const volumeId = volumeIdConverter.numberToString(volumeNumber);
@@ -495,8 +434,6 @@ const navigationService = {
                 uiService.renderChapterContent(chapterData, volumeData, chapterIndex, appState.currentVolumeChapters.length);
             }
         } else if ((match = path.match(URL_REGEX.VOLUME_READ))) {
-            // Clear search results and input when navigating to a volume
-            app.clearSearch();
             const seriesId = match[1];
             const volumeNumber = parseInt(match[2], 10);
             const volumeId = volumeIdConverter.numberToString(volumeNumber);
@@ -506,9 +443,7 @@ const navigationService = {
             
             this.loadContentFromUrl();
             return;
-        } else if (path === '' || path === 'index.html') { // Handle empty path for homepage
-            // Clear search results and input when navigating to homepage
-            app.clearSearch();
+        } else if (path === '/' || path === '/index.html') {
             this._updateAppState('home');
             const seriesIndex = await dataService.fetchJson('/series/series-index.json');
             if (seriesIndex) {
@@ -517,8 +452,6 @@ const navigationService = {
             appState.isTocSidebarOpen = false;
             app.applyLayoutClasses();
         } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
-            // Clear search results and input when navigating to series detail
-            app.clearSearch();
             const seriesId = match[1];
             this._updateAppState('series-detail', seriesId);
             const info = await dataService.fetchJson(`/series/${seriesId}/info.json`);
@@ -529,8 +462,6 @@ const navigationService = {
             appState.isTocSidebarOpen = false;
             app.applyLayoutClasses();
         } else {
-            // Clear search results and input for unknown paths and redirect to homepage
-            app.clearSearch();
             this.goToHomepage();
         }
     },
@@ -562,46 +493,8 @@ const navigationService = {
         }
         history.pushState(null, '', `/${seriesId}/${volumeNumber}/${chapterIndex}`);
         this.loadContentFromUrl();
-    },
-
-    // Removed goToSearch as it's no longer needed for URL manipulation
-    // goToSearch(query) {
-    //     history.pushState(null, '', `/?q=${encodeURIComponent(query)}`);
-    //     this.loadContentFromUrl();
-    // }
-};
-
-const searchService = {
-    async performSearch(query) {
-        appState.currentSearchTerm = query;
-        if (query.trim() === '') {
-            // If query is empty, hide search results and show homepage
-            DOMElements.searchResultsContainer.classList.add('hidden');
-            DOMElements.dynamicContent.classList.remove('hidden');
-            navigationService.goToHomepage(); // Ensure homepage content is loaded
-            return;
-        }
-
-        const seriesIndex = await dataService.fetchJson('/series/series-index.json');
-        if (seriesIndex) {
-            let filteredSeries = seriesIndex.filter(series =>
-                series.judul.toLowerCase().includes(query.toLowerCase()) ||
-                series.penulis.toLowerCase().includes(query.toLowerCase()) ||
-                series.genre.toLowerCase().includes(query.toLowerCase())
-            );
-
-            // Sort the filtered series by 'rilis' (release date) in descending order
-            filteredSeries.sort((a, b) => {
-                const dateA = new Date(a.rilis);
-                const dateB = new Date(b.rilis);
-                return dateB - dateA; // Descending order (newest first)
-            });
-
-            uiService.renderSearchResults(filteredSeries, query);
-        }
     }
 };
-
 
 const app = {
     applyLayoutClasses() {
@@ -659,23 +552,6 @@ const app = {
         app.applyLayoutClasses();
     },
 
-    // Modified function to handle search input
-    handleSearchInput: debounce(function() {
-        const query = DOMElements.searchInput.value.trim();
-        searchService.performSearch(query); // Call the new searchService
-    }, 300), // Debounce for 300ms to limit API calls
-
-    // New function to clear search input and hide results
-    clearSearch() {
-        if (DOMElements.searchInput) {
-            DOMElements.searchInput.value = '';
-        }
-        DOMElements.searchResultsContainer.innerHTML = ''; // Clear content
-        DOMElements.searchResultsContainer.classList.add('hidden'); // Hide container
-        DOMElements.dynamicContent.classList.remove('hidden'); // Show main content
-        appState.currentSearchTerm = ''; // Clear search term from state
-    },
-
     setupEventListeners() {
         DOMElements.sidebarToggle.addEventListener('click', () => app.toggleTocSidebar());
         DOMElements.overlay.addEventListener('click', function() {
@@ -698,20 +574,9 @@ const app = {
             }
         });
 
-        // Event listeners for search input
-        if (DOMElements.searchInput) {
-            DOMElements.searchInput.addEventListener('input', app.handleSearchInput);
-            DOMElements.searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    app.handleSearchInput();
-                }
-            });
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             app.checkMobile();
             const currentPath = window.location.pathname;
-            // Normalize path for initial load if it's not root or index.html
             if (currentPath !== '/' && currentPath !== '/index.html') {
                 history.replaceState(null, '', '/');
                 history.pushState(null, '', currentPath);
