@@ -255,7 +255,7 @@ const uiService = {
 
         const contentHtml = `
             <h2 class="text-xl font-semibold mb-8 page-title">Light Novel Terbaru</h2>
-            <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 series-grid">
+            <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 series-grid">
                 ${seriesHtml}
             </div>
         `;
