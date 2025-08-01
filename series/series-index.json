@@ -13,4 +13,11 @@
     "kategori": "Fantasi",
     "format": "Web Novel"
   }
+  {
+    "id": "pahlawan-timur",
+    "judul": "Pahlawan Timur",
+    "cover": "covers/pahlawan-timur-detail.jpg",
+    "kategori": "Fantasi",
+    "format": "Manga"
+  }
 ]
