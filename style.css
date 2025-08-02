@@ -1,199 +1,40 @@
-/*==================================
-  Gaya Umum dan Layout Aplikasi
-  ==================================*/
 html, body {
-    height: 100%;
+    height: 100%; /* Memastikan elemen html dan body mengambil tinggi penuh viewport */
     margin: 0;
     padding: 0;
 }
 
-body {
-    background-color: white;
-    color: black;
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* Gaya untuk Header Utama Aplikasi */
-.app-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background-color: white;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 0.75rem 1rem;
-    z-index: 40;
-    transition: all 0.3s ease-in-out;
-    height: 56px;
+#mainAppHeader {
+    height: 56px; /* Tinggi header */
+    /* Padding dan flex properties dipindahkan ke div di dalamnya */
 }
 
-.app-header-container {
-    max-width: 72rem;
-    margin-left: auto;
-    margin-right: auto;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
 
-.app-header-left {
-    display: flex;
-    align-items: center;
-}
-
-.app-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-left: 1rem;
-}
-
-.app-header-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.header-nav-link {
-    color: #6b7280;
-    transition: color 0.15s ease-in-out;
-}
-
-.header-nav-link:hover {
-    color: black;
-}
-
-/* Kotak Pencarian */
-.search-container {
-    position: relative;
-}
-
-.search-input {
-    padding-left: 0.75rem;
-    padding-right: 2.5rem;
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    width: 8rem;
-}
-
-.search-input:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px #3b82f6;
-}
-
-.search-icon {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9ca3af;
-    font-size: 1.125rem;
-}
-
-/* Overlay untuk mobile */
-.app-overlay {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 30;
-    display: none;
-}
-
-/* Konten Utama */
+/* Penyesuaian padding konten utama agar tidak tertutup header */
 .main-content-wrapper {
-    padding-top: 56px; /* Tinggi header */
-    margin-left: 0;
-    flex-grow: 1;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-    transition: all 0.3s ease-in-out;
+    padding-top: 56px; /* Tinggi #mainAppHeader */
+    margin-left: 0; /* Default tanpa sidebar */
 }
 
-.dynamic-content-area {
-    max-width: 72rem;
-    margin-left: auto;
-    margin-right: auto;
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-
-.loading-state {
-    text-align: center;
-    padding-top: 2.5rem;
-    padding-bottom: 2.5rem;
-    color: #6b7280;
-}
-
-.error-message {
-    text-align: center;
-    padding-top: 2.5rem;
-    padding-bottom: 2.5rem;
-    color: #ef4444;
-}
-
-/* Footer Aplikasi */
-.app-footer {
-    color: #6b7280;
-    text-align: center;
-    padding: 1rem;
-    font-size: 0.875rem;
-    margin-top: auto;
-}
-
-.app-footer-container {
-    max-width: 72rem;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
-
-
-/*==================================
-  Gaya Khusus Sidebar (TOC)
-  ==================================*/
-.sidebar-toggle-button {
-    padding: 0.5rem;
-    transition: background-color 0.15s ease-in-out;
-    border-radius: 0.25rem;
-}
-
-.sidebar-toggle-button:hover {
-    background-color: #f3f4f6;
-}
-
-.text-icon {
-    font-size: 1.25rem;
-}
-
-.md-hidden {
-    display: none;
-}
-
-.md-flex {
-    display: flex;
-    gap: 1rem;
-}
-
+/* Gaya untuk Sidebar TOC (dinamis) */
 #tocSidebar {
     position: fixed;
     left: 0;
     top: 0;
     height: 100%;
-    width: 256px;
+    width: 256px; /* Lebar sidebar TOC */
     background-color: white;
     border-right: 1px solid #e5e7eb;
     transition: transform 0.3s ease-in-out;
-    z-index: 50;
+    z-index: 50; /* Lebih tinggi dari overlay */
     display: flex;
     flex-direction: column;
 }
@@ -212,7 +53,7 @@ body {
 #tocSidebar .toc-nav {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 16px;
     display: flex;
     flex-direction: column;
 }
@@ -220,377 +61,73 @@ body {
 #tocSidebar .toc-menu-item a {
     display: flex;
     align-items: center;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.25rem;
+    padding: 8px 12px;
+    border-radius: 0.25rem; /* rounded */
     transition: background-color 0.15s ease-in-out;
 }
 
 #tocSidebar .toc-menu-item a:hover {
-    background-color: #f3f4f6;
+    background-color: #f3f4f6; /* hover:bg-gray-100 */
 }
 
 #tocSidebar .toc-menu-item a.active {
-    background-color: #e0f2fe;
-    color: #2563eb;
-}
-
-/*==================================
-  Gaya Tampilan Utama (Konten Dinamis)
-  ==================================*/
-.fade-out {
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
-
-.series-grid, .volumes-grid {
-    display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.page-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-}
-
-.series-card, .volume-card {
-    cursor: pointer;
-    transition: opacity 0.15s ease-in-out;
-}
-
-.series-card:hover, .volume-card:hover {
-    opacity: 0.8;
-}
-
-.series-cover-wrapper, .volume-cover-wrapper {
-    aspect-ratio: 3/4;
-    background-color: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    margin-bottom: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    position: relative;
-}
-
-.series-cover-image, .volume-cover-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.series-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-.badge-format {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: white;
-    border-radius: 9999px; /* full rounded */
-}
-
-.badge-light-novel { background-color: #3b82f6; }
-.badge-manga { background-color: #22c55e; }
-.badge-web-novel { background-color: #a855f7; }
-.badge-default { background-color: #6b7280; }
-
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.volume-title {
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-align: center;
-}
-
-.series-detail-container {
-    margin-bottom: 1.5rem;
-}
-
-.series-header-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.series-poster-wrapper {
-    width: 100%;
-    flex-shrink: 0;
-}
-
-.series-poster-placeholder {
-    aspect-ratio: 3/4;
-    background-color: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.series-poster-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.series-info-section {
-    flex: 1;
-}
-
-.series-info-section .series-title {
-    font-size: 1.875rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
-
-.series-metadata {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1rem;
-    color: #6b7280;
-    margin-bottom: 1rem;
-}
-
-.series-metadata > div {
-    display: flex;
-    align-items: center;
-    font-size: 0.875rem;
-}
-
-.series-metadata .material-icons {
-    font-size: 0.875rem;
-    margin-right: 0.25rem;
-    vertical-align: middle;
-}
-
-.series-synopsis {
-    margin-bottom: 1rem;
-}
-
-.series-synopsis h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-}
-
-.series-synopsis p {
-    margin-bottom: 1rem;
-}
-
-.series-volumes-section h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-}
-
-.chapter-content-wrapper h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-}
-
-.chapter-paragraph {
-    margin-bottom: 1rem;
-}
-
-.chapter-image-wrapper {
-    margin-top: 1.5rem;
-    margin-bottom: 1.5rem;
-    text-align: center;
-}
-
-.chapter-image {
-    max-width: 100%;
-    height: auto;
-    margin-left: auto;
-    margin-right: auto;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.chapter-quote {
-    border-left: 4px solid #d1d5db;
-    padding-left: 1rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    margin: 1rem 0;
-    font-style: italic;
-    color: #4b5563;
-}
-
-.chapter-dialog-block {
-    background-color: #f9fafb;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin: 1rem 0;
-}
-
-.chapter-dialog-line {
-    margin-bottom: 0.5rem;
-}
-
-.chapter-dialog-character {
-    color: #1e40af;
-}
-
-.chapter-navigation-bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.chapter-nav-button {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    border-radius: 0.25rem;
-}
-
-.chapter-nav-prev {
-    background-color: #f3f4f6;
-    transition: background-color 0.15s ease-in-out;
-}
-
-.chapter-nav-prev:hover {
-    background-color: #e5e7eb;
-}
-
-.chapter-nav-next {
-    background-color: #2563eb;
-    color: white;
-    transition: background-color 0.15s ease-in-out;
-}
-
-.chapter-nav-next:hover {
-    background-color: #1e40af;
+    background-color: #e0f2fe; /* bg-blue-100 */
+    color: #2563eb; /* text-blue-600 */
 }
 
 
-/*==================================
-  Gaya Responsif
-  ==================================*/
-
-/* Tablet dan Desktop */
+/* Desktop Styles */
 @media (min-width: 768px) {
-    /* Aturan desktop */
-    .app-title {
-        margin-left: 0;
+    #mainAppHeader {
+        /* Header utama di desktop akan bergeser sesuai dengan sidebar TOC */
+        left: 0; /* Default: di kiri */
     }
-
-    .md-hidden {
-        display: none;
-    }
-
-    .md-flex {
-        display: flex;
-    }
-
-    .search-input {
-        width: 12rem;
-    }
-
-    .series-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .volumes-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-    
-    .series-header-section {
-        flex-direction: row;
-    }
-    
-    .series-poster-wrapper {
-        width: 20rem;
-    }
-    
-    /* Penyesuaian saat sidebar TOC aktif di desktop */
-    body.toc-active .app-header {
-        left: 256px;
-    }
-    
-    body.toc-active .main-content-wrapper {
-        margin-left: 256px;
-    }
-
-    /* Memastikan sidebar TOC terlihat di desktop */
-    #tocSidebar {
-        transform: translateX(0);
-    }
-}
-
-@media (min-width: 1024px) {
-    .series-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-    
-    .volumes-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-}
-
-@media (min-width: 1280px) {
-    .series-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-}
-
-/* Mobile */
-@media (max-width: 767px) {
-    .app-header {
-        left: 0;
-    }
-    
-    .app-title {
-        margin-left: 1rem;
-    }
-    
     .main-content-wrapper {
-        margin-left: 0 !important;
+        margin-left: 0; /* Default: tanpa sidebar */
     }
-    
-    .md-hidden {
-        display: block;
+    #sidebarToggle {
+        display: none; /* Sembunyikan toggle di desktop */
     }
-
-    .md-flex {
-        display: none;
-    }
-
-    /* Sembunyikan sidebar TOC secara default di mobile */
     #tocSidebar {
+        transform: translateX(0); /* Pastikan sidebar TOC terlihat di desktop */
+    }
+    #tocSidebar.toc-sidebar-hidden { /* Ini untuk kasus di mana sidebar TOC tidak ada di DOM */
         transform: translateX(-100%);
     }
 
-    /* Tampilkan saat tidak tersembunyi */
-    #tocSidebar:not(.toc-sidebar-hidden) {
-        transform: translateX(0);
+    /* Penyesuaian saat sidebar TOC aktif di desktop */
+    body.toc-active #mainAppHeader {
+        left: 256px; /* Header bergeser saat TOC aktif */
     }
+    body.toc-active .main-content-wrapper {
+        margin-left: 256px; /* Konten utama bergeser saat TOC aktif */
+    }
+}
 
-    /* Tampilkan overlay saat sidebar TOC terbuka */
-    .app-overlay {
-        display: none;
+/* Mobile Styles */
+@media (max-width: 767px) {
+    #mainAppHeader {
+        left: 0; /* Header selalu di kiri di mobile */
     }
-    
+    .main-content-wrapper {
+        margin-left: 0 !important; /* Konten utama selalu penuh di mobile */
+    }
+    #sidebarToggle {
+        display: block; /* Tampilkan toggle di mobile */
+    }
+    #tocSidebar {
+        transform: translateX(-100%); /* Sembunyikan sidebar TOC secara default di mobile */
+    }
+    #tocSidebar.toc-sidebar-hidden {
+        transform: translateX(-100%); /* Pastikan tersembunyi */
+    }
+    #tocSidebar:not(.toc-sidebar-hidden) {
+        transform: translateX(0); /* Tampilkan saat tidak tersembunyi */
+    }
+    .app-overlay {
+        display: none; /* Default hidden */
+    }
+    /* Tampilkan overlay saat sidebar TOC terbuka */
     #tocSidebar:not(.toc-sidebar-hidden) + .app-overlay {
         display: block;
     }
