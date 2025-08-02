@@ -1,3 +1,6 @@
+//==================================
+// Objek DOM, State Aplikasi, dan Utilitas
+//==================================
 const DOMElements = {
     sidebarToggle: document.getElementById('sidebarToggle'),
     mainAppHeader: document.getElementById('mainAppHeader'),
@@ -45,6 +48,9 @@ const volumeIdConverter = {
     }
 };
 
+//==================================
+// Layanan Data
+//==================================
 const dataService = {
     CACHE_PREFIX: 'app_data_cache_',
     CACHE_EXPIRATION_SECONDS: 300,
@@ -72,15 +78,16 @@ const dataService = {
             };
             localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(itemToCache));
         } catch (e) {
+            // Tangani error jika localStorage penuh
         }
     },
 
     async fetchJson(path) {
         const cacheKey = path;
         let cachedData = this.getCache(cacheKey);
-
+        
         try {
-            const response = await fetch(path); 
+            const response = await fetch(path);
             
             if (!response.ok) {
                 throw new Error(`Failed to load ${path}: ${response.statusText}`);
@@ -99,7 +106,7 @@ const dataService = {
             if (cachedData && cachedData.data) {
                 return cachedData.data;
             } else {
-                DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Konten belum tersedia atau gagal dimuat. Silakan coba lagi nanti atau hubungi administrator.</div>`;
+                DOMElements.dynamicContent.innerHTML = `<div class="error-message">Konten belum tersedia atau gagal dimuat. Silakan coba lagi nanti atau hubungi administrator.</div>`;
                 return null;
             }
         }
@@ -120,6 +127,9 @@ const dataService = {
     }
 };
 
+//==================================
+// Layanan UI (Merender Konten)
+//==================================
 const uiService = {
     async renderContentWithTransition(contentHtml) {
         DOMElements.dynamicContent.classList.add('fade-out');
@@ -132,7 +142,7 @@ const uiService = {
         if (!DOMElements.tocSidebar) {
             const tocSidebarElement = document.createElement('aside');
             tocSidebarElement.id = 'tocSidebar';
-            tocSidebarElement.classList.add('app-sidebar', 'toc-sidebar-hidden');
+            tocSidebarElement.classList.add('toc-sidebar-hidden');
             document.body.appendChild(tocSidebarElement);
             DOMElements.tocSidebar = tocSidebarElement;
 
@@ -154,45 +164,43 @@ const uiService = {
                     const isActive = index === appState.currentChapterIndex ? 'active' : '';
                     chaptersHtml += `
                         <li class="toc-menu-item">
-                            <a href="#" onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); app.toggleTocSidebar(false); return false;" class="${isActive}">
-                                <span class="material-icons">menu_book</span>
-                                <span>${chapter.judul}</span>
+                            <a href="#" onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); app.toggleTocSidebar(false); return false;" class="flex items-center ${isActive}">
+                                <span class="material-icons mr-2">menu_book</span>
+                                <span class="text-sm">${chapter.judul}</span>
                             </a>
                         </li>
                     `;
                 });
             } else {
-                chaptersHtml = `<li class="toc-menu-item no-chapters">Tidak ada bab ditemukan.</li>`;
+                chaptersHtml = `<li class="toc-menu-item text-gray-500 px-3 py-2">Tidak ada bab ditemukan.</li>`;
             }
 
-            sidebarContentHtml = `
-                ${chaptersHtml}
-            `;
+            sidebarContentHtml = `${chaptersHtml}`;
         } else {
             sidebarTitle = 'Menu Utama';
             sidebarContentHtml = `
                 <li class="toc-menu-item">
                     <a href="#" onclick="navigationService.goToHomepage(); app.toggleTocSidebar(false); return false;">
-                        <span class="material-icons">home</span>
+                        <span class="material-icons mr-2">home</span>
                         Beranda
                     </a>
                 </li>
-                <li class="toc-menu-divider"></li>
+                <li class="toc-divider"></li>
                 <li class="toc-menu-item">
-                    <a href="#">
-                        <span class="material-icons">info</span>
+                    <a href="#" class="toc-menu-link-secondary">
+                        <span class="material-icons mr-2">info</span>
                         Tentang
                     </a>
                 </li>
                 <li class="toc-menu-item">
-                    <a href="#">
-                        <span class="material-icons">email</span>
+                    <a href="#" class="toc-menu-link-secondary">
+                        <span class="material-icons mr-2">email</span>
                         Kontak
                     </a>
                 </li>
                 <li class="toc-menu-item">
-                    <a href="#">
-                        <span class="material-icons">security</span>
+                    <a href="#" class="toc-menu-link-secondary">
+                        <span class="material-icons mr-2">security</span>
                         Kebijakan Privasi
                     </a>
                 </li>
@@ -201,13 +209,13 @@ const uiService = {
 
         DOMElements.tocSidebar.innerHTML = `
             <header class="toc-header">
-                <h2>${sidebarTitle}</h2>
-                <button id="closeTocSidebar" class="sidebar-toggle">
-                    <span class="material-icons">close</span>
+                <h2 class="app-title-2">${sidebarTitle}</h2>
+                <button id="closeTocSidebar" class="sidebar-toggle-button md-hidden">
+                    <span class="material-icons text-icon">close</span>
                 </button>
             </header>
             <nav class="toc-nav">
-                <ul>
+                <ul class="toc-menu-list">
                     ${sidebarContentHtml}
                 </ul>
             </nav>
@@ -215,40 +223,38 @@ const uiService = {
 
         if (appState.isMobile && !appState.isTocSidebarOpen) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-            DOMElements.tocSidebar.classList.remove('active');
-        } else if (appState.isMobile && appState.isTocSidebarOpen) {
-            DOMElements.tocSidebar.classList.add('active');
         }
     },
 
     removeTocSidebar() {
         if (DOMElements.tocSidebar) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-            DOMElements.tocSidebar.classList.remove('active');
             appState.isTocSidebarOpen = false;
         }
-        DOMElements.overlay.classList.remove('active');
+        DOMElements.overlay.classList.add('hidden');
     },
 
     async renderHomepageContent(seriesIndex) {
         let seriesHtml = ``;
         seriesIndex.forEach(series => {
-            let badgeClass = 'badge-default';
+            let badgeClass = '';
             if (series.format === 'Light Novel') {
                 badgeClass = 'badge-light-novel';
             } else if (series.format === 'Manga') {
                 badgeClass = 'badge-manga';
             } else if (series.format === 'Web Novel') {
                 badgeClass = 'badge-web-novel';
+            } else {
+                badgeClass = 'badge-default';
             }
 
             seriesHtml += `
                 <article class="series-card" onclick="navigationService.goToSeriesDetail('${series.id}')">
                     <div class="series-cover-wrapper">
-                        ${series.cover ? `<img src="${dataService.getAbsoluteCoverPath(series.cover)}" alt="${series.judul}" class="series-cover-image" loading="lazy">` : `<svg class="series-cover-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${series.cover ? `<img src="${dataService.getAbsoluteCoverPath(series.cover)}" alt="${series.judul}" class="series-cover-image" loading="lazy">` : `<svg class="series-cover-placeholder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
-                        ${series.format ? `<span class="badge ${badgeClass}">${series.format}</span>` : ''}
+                        ${series.format ? `<span class="badge-format ${badgeClass}">${series.format}</span>` : ''}
                     </div>
                     <h3 class="series-title line-clamp-2">${series.judul}</h3>
                 </article>
@@ -269,8 +275,8 @@ const uiService = {
         volumes.forEach(volume => {
             volumesHtml += `
                 <div class="volume-card" onclick="navigationService.goToVolume('${appState.currentSeriesId}', '${volume.id}')">
-                    <div class="volume-cover-placeholder">
-                        ${volume.cover ? `<img src="${dataService.getAbsoluteCoverPath(volume.cover)}" alt="${volume.judul}" class="volume-cover-image" loading="lazy">` : `<svg class="volume-cover-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="volume-cover-wrapper">
+                        ${volume.cover ? `<img src="${dataService.getAbsoluteCoverPath(volume.cover)}" alt="${volume.judul}" class="volume-cover-image" loading="lazy">` : `<svg class="volume-cover-placeholder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
                     </div>
@@ -284,14 +290,14 @@ const uiService = {
                 <div class="series-header-section">
                     <div class="series-poster-wrapper">
                         <div class="series-poster-placeholder">
-                            ${info.cover ? `<img src="${dataService.getAbsoluteCoverPath(info.cover)}" alt="${info.judul}" class="series-poster-image" loading="lazy">` : `<svg class="series-poster-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            ${info.cover ? `<img src="${dataService.getAbsoluteCoverPath(info.cover)}" alt="${info.judul}" class="series-poster-image" loading="lazy">` : `<svg class="series-poster-placeholder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>`}
+                            </svg>`}
                         </div>
                     </div>
                     
                     <div class="series-info-section">
-                        <h1 class="series-title-detail">${info.judul}</h1>
+                        <h1 class="series-title">${info.judul}</h1>
                         <div class="series-metadata">
                             <div class="series-author">
                                 <span class="material-icons">person</span>
@@ -355,13 +361,13 @@ const uiService = {
             }
         });
         
-        const prevButton = chapterIndex > 0 ? 
+        const prevButton = chapterIndex > 0 ?
             `<button onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex - 1})" class="chapter-nav-button chapter-nav-prev">
                 <span class="material-icons">arrow_back</span>
                 Bab Sebelumnya
             </button>` : '';
         
-        const nextButton = chapterIndex < totalChapters - 1 ? 
+        const nextButton = chapterIndex < totalChapters - 1 ?
             `<button onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex + 1})" class="chapter-nav-button chapter-nav-next">
                 Bab Selanjutnya
                 <span class="material-icons">arrow_forward</span>
@@ -369,7 +375,7 @@ const uiService = {
         
         const contentHtml = `
             <div class="chapter-content-wrapper">
-                <h2 class="chapter-title-page">${chapterData.judul}</h2>
+                <h2 class="chapter-title">${chapterData.judul}</h2>
                 ${chapterContentHtml}
                 
                 <div class="chapter-navigation-bottom">
@@ -384,6 +390,9 @@ const uiService = {
     }
 };
 
+//==================================
+// Layanan Navigasi
+//==================================
 const navigationService = {
     _updateAppState(view, seriesId = null, volumeId = null, chapterIndex = 0) {
         appState.currentView = view;
@@ -394,6 +403,7 @@ const navigationService = {
 
     async loadContentFromUrl() {
         const path = window.location.pathname;
+        DOMElements.dynamicContent.innerHTML = `<div class="loading-state"><p>Memuat konten...</p></div>`;
 
         let match;
 
@@ -407,7 +417,7 @@ const navigationService = {
 
             const volumeData = await dataService.fetchJson(`/series/${seriesId}/${volumeId}/${volumeId}.json`);
             if (!volumeData) {
-                appState.isTocSidebarOpen = false;
+                app.toggleTocSidebar(false);
                 app.applyLayoutClasses();
                 return;
             }
@@ -415,14 +425,14 @@ const navigationService = {
             appState.currentVolumeChapters = volumeData.bab;
             appState.currentVolumeData = volumeData;
             
-            uiService.renderDynamicSidebarContent(); 
-            appState.isTocSidebarOpen = !appState.isMobile; 
+            uiService.renderDynamicSidebarContent();
+            appState.isTocSidebarOpen = !appState.isMobile;
             app.applyLayoutClasses();
             
             const chapterInfo = appState.currentVolumeChapters[chapterIndex];
             if (!chapterInfo) {
-                DOMElements.dynamicContent.innerHTML = `<div class="text-center py-10 text-red-500">Bab tidak ditemukan.</div>`;
-                appState.isTocSidebarOpen = false;
+                DOMElements.dynamicContent.innerHTML = `<div class="error-message">Bab tidak ditemukan.</div>`;
+                app.toggleTocSidebar(false);
                 app.applyLayoutClasses();
                 return;
             }
@@ -446,7 +456,7 @@ const navigationService = {
             if (seriesIndex) {
                 uiService.renderHomepageContent(seriesIndex);
             }
-            appState.isTocSidebarOpen = false;
+            app.toggleTocSidebar(false);
             app.applyLayoutClasses();
         } else if ((match = path.match(URL_REGEX.SERIES_DETAIL))) {
             const seriesId = match[1];
@@ -456,7 +466,7 @@ const navigationService = {
             if (info && volumes) {
                 uiService.renderSeriesDetailContent(info, volumes);
             }
-            appState.isTocSidebarOpen = false;
+            app.toggleTocSidebar(false);
             app.applyLayoutClasses();
         } else {
             this.goToHomepage();
@@ -493,41 +503,43 @@ const navigationService = {
     }
 };
 
+//==================================
+// Objek Aplikasi Utama
+//==================================
 const app = {
     applyLayoutClasses() {
-        DOMElements.mainContent.style.marginLeft = '0';
-        DOMElements.mainAppHeader.style.left = '0';
-        document.body.classList.remove('toc-active');
-        DOMElements.overlay.classList.remove('active');
-
         if (appState.isMobile) {
-            DOMElements.mainContent.classList.add('main-mobile-full');
+            // Gaya mobile
+            DOMElements.mainContent.style.marginLeft = '0';
+            DOMElements.mainAppHeader.style.left = '0';
+            document.body.classList.remove('toc-active');
             DOMElements.sidebarToggle.style.display = 'block';
 
             if (DOMElements.tocSidebar) {
                 if (appState.isTocSidebarOpen) {
                     DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-                    DOMElements.tocSidebar.classList.add('active');
-                    DOMElements.overlay.classList.add('active');
+                    DOMElements.overlay.style.display = 'block';
                 } else {
                     DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-                    DOMElements.tocSidebar.classList.remove('active');
+                    DOMElements.overlay.style.display = 'none';
                 }
             }
         } else {
-            DOMElements.mainContent.classList.remove('main-mobile-full');
+            // Gaya desktop
             DOMElements.sidebarToggle.style.display = 'none';
+            DOMElements.overlay.style.display = 'none';
 
             if (appState.currentView === 'volume-read' && DOMElements.tocSidebar) {
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-                DOMElements.tocSidebar.classList.add('active');
                 DOMElements.mainContent.style.marginLeft = '256px';
                 DOMElements.mainAppHeader.style.left = '256px';
                 document.body.classList.add('toc-active');
             } else {
+                DOMElements.mainContent.style.marginLeft = '0';
+                DOMElements.mainAppHeader.style.left = '0';
+                document.body.classList.remove('toc-active');
                 if (DOMElements.tocSidebar) {
                     DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
-                    DOMElements.tocSidebar.classList.remove('active');
                 }
             }
         }
@@ -549,7 +561,7 @@ const app = {
         const newState = forceState !== null ? forceState : !appState.isTocSidebarOpen;
         appState.isTocSidebarOpen = newState;
         
-        uiService.renderDynamicSidebarContent(); 
+        uiService.renderDynamicSidebarContent();
         app.applyLayoutClasses();
     },
 
