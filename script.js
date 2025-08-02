@@ -154,15 +154,15 @@ const uiService = {
                     const isActive = index === appState.currentChapterIndex ? 'active' : '';
                     chaptersHtml += `
                         <li class="toc-menu-item">
-                            <a href="#" onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); app.toggleTocSidebar(false); return false;" class="flex items-center ${isActive}">
-                                <span class="material-icons text-xl flex-shrink-0 mr-2">menu_book</span>
-                                <span class="text-sm">${chapter.judul}</span>
+                            <a href="#" onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${index}); app.toggleTocSidebar(false); return false;" class="${isActive}">
+                                <span class="material-icons">menu_book</span>
+                                <span>${chapter.judul}</span>
                             </a>
                         </li>
                     `;
                 });
             } else {
-                chaptersHtml = `<li class="toc-menu-item text-gray-500 px-3 py-2">Tidak ada bab ditemukan.</li>`;
+                chaptersHtml = `<li class="toc-menu-item no-chapters">Tidak ada bab ditemukan.</li>`;
             }
 
             sidebarContentHtml = `
@@ -172,27 +172,27 @@ const uiService = {
             sidebarTitle = 'Menu Utama';
             sidebarContentHtml = `
                 <li class="toc-menu-item">
-                    <a href="#" onclick="navigationService.goToHomepage(); app.toggleTocSidebar(false); return false;" class="flex items-center">
-                        <span class="material-icons mr-2">home</span>
+                    <a href="#" onclick="navigationService.goToHomepage(); app.toggleTocSidebar(false); return false;">
+                        <span class="material-icons">home</span>
                         Beranda
                     </a>
                 </li>
-                <li class="border-t border-gray-200 my-2"></li>
+                <li class="toc-menu-divider"></li>
                 <li class="toc-menu-item">
-                    <a href="#" class="flex items-center text-gray-600 hover:text-black">
-                        <span class="material-icons mr-2">info</span>
+                    <a href="#">
+                        <span class="material-icons">info</span>
                         Tentang
                     </a>
                 </li>
                 <li class="toc-menu-item">
-                    <a href="#" class="flex items-center text-gray-600 hover:text-black">
-                        <span class="material-icons mr-2">email</span>
+                    <a href="#">
+                        <span class="material-icons">email</span>
                         Kontak
                     </a>
                 </li>
                 <li class="toc-menu-item">
-                    <a href="#" class="flex items-center text-gray-600 hover:text-black">
-                        <span class="material-icons mr-2">security</span>
+                    <a href="#">
+                        <span class="material-icons">security</span>
                         Kebijakan Privasi
                     </a>
                 </li>
@@ -201,13 +201,13 @@ const uiService = {
 
         DOMElements.tocSidebar.innerHTML = `
             <header class="toc-header">
-                <h2 class="text-xl font-semibold">${sidebarTitle}</h2>
-                <button id="closeTocSidebar" class="p-2 hover:bg-gray-100 rounded md:hidden">
-                    <span class="material-icons text-xl">close</span>
+                <h2>${sidebarTitle}</h2>
+                <button id="closeTocSidebar" class="sidebar-toggle">
+                    <span class="material-icons">close</span>
                 </button>
             </header>
             <nav class="toc-nav">
-                <ul class="space-y-2">
+                <ul>
                     ${sidebarContentHtml}
                 </ul>
             </nav>
@@ -215,47 +215,49 @@ const uiService = {
 
         if (appState.isMobile && !appState.isTocSidebarOpen) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+            DOMElements.tocSidebar.classList.remove('active');
+        } else if (appState.isMobile && appState.isTocSidebarOpen) {
+            DOMElements.tocSidebar.classList.add('active');
         }
     },
 
     removeTocSidebar() {
         if (DOMElements.tocSidebar) {
             DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+            DOMElements.tocSidebar.classList.remove('active');
             appState.isTocSidebarOpen = false;
         }
-        DOMElements.overlay.classList.add('hidden');
+        DOMElements.overlay.classList.remove('active');
     },
 
     async renderHomepageContent(seriesIndex) {
         let seriesHtml = ``;
         seriesIndex.forEach(series => {
-            let badgeColorClass = '';
+            let badgeClass = 'badge-default';
             if (series.format === 'Light Novel') {
-                badgeColorClass = 'bg-blue-500';
+                badgeClass = 'badge-light-novel';
             } else if (series.format === 'Manga') {
-                badgeColorClass = 'bg-green-500';
+                badgeClass = 'badge-manga';
             } else if (series.format === 'Web Novel') {
-                badgeColorClass = 'bg-purple-500';
-            } else {
-                badgeColorClass = 'bg-gray-500';
+                badgeClass = 'badge-web-novel';
             }
 
             seriesHtml += `
-                <article class="cursor-pointer hover:opacity-80 transition-opacity series-card" onclick="navigationService.goToSeriesDetail('${series.id}')">
-                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-3 flex items-center justify-center overflow-hidden relative">
-                        ${series.cover ? `<img src="${dataService.getAbsoluteCoverPath(series.cover)}" alt="${series.judul}" class="w-full h-full object-cover series-cover-image" loading="lazy">` : `<svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <article class="series-card" onclick="navigationService.goToSeriesDetail('${series.id}')">
+                    <div class="series-cover-wrapper">
+                        ${series.cover ? `<img src="${dataService.getAbsoluteCoverPath(series.cover)}" alt="${series.judul}" class="series-cover-image" loading="lazy">` : `<svg class="series-cover-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
-                        ${series.format ? `<span class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white rounded-full ${badgeColorClass}">${series.format}</span>` : ''}
+                        ${series.format ? `<span class="badge ${badgeClass}">${series.format}</span>` : ''}
                     </div>
-                    <h3 class="text-sm font-medium line-clamp-2 series-title">${series.judul}</h3>
+                    <h3 class="series-title line-clamp-2">${series.judul}</h3>
                 </article>
             `;
         });
 
         const contentHtml = `
-            <h2 class="text-xl font-semibold mb-8 page-title">Light Novel Terbaru</h2>
-            <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 series-grid">
+            <h2 class="page-title">Light Novel Terbaru</h2>
+            <div class="series-grid">
                 ${seriesHtml}
             </div>
         `;
@@ -266,61 +268,59 @@ const uiService = {
         let volumesHtml = '';
         volumes.forEach(volume => {
             volumesHtml += `
-                <div class="cursor-pointer hover:opacity-80 transition-opacity volume-card" onclick="navigationService.goToVolume('${appState.currentSeriesId}', '${volume.id}')">
-                    <div class="aspect-[3/4] bg-gray-100 border border-gray-200 mb-2 flex items-center justify-center overflow-hidden volume-cover-placeholder">
-                        ${volume.cover ? `<img src="${dataService.getAbsoluteCoverPath(volume.cover)}" alt="${volume.judul}" class="w-full h-full object-cover volume-cover-image" loading="lazy">` : `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="volume-card" onclick="navigationService.goToVolume('${appState.currentSeriesId}', '${volume.id}')">
+                    <div class="volume-cover-placeholder">
+                        ${volume.cover ? `<img src="${dataService.getAbsoluteCoverPath(volume.cover)}" alt="${volume.judul}" class="volume-cover-image" loading="lazy">` : `<svg class="volume-cover-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
                     </div>
-                    <h4 class="text-xs font-medium text-center volume-title">${volume.judul}</h4>
+                    <h4 class="volume-title">${volume.judul}</h4>
                 </div>
             `;
         });
 
         const contentHtml = `
-            <div class="mb-6">
-            </div>
             <div class="series-detail-container">
-                <div class="flex flex-col md:flex-row gap-6 mb-8 series-header-section">
-                    <div class="w-full md:w-80 flex-shrink-0 series-poster-wrapper">
-                        <div class="aspect-[3/4] bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden series-poster-placeholder">
-                            ${info.cover ? `<img src="${dataService.getAbsoluteCoverPath(info.cover)}" alt="${info.judul}" class="w-full h-full object-cover series-poster-image" loading="lazy">` : `<svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="series-header-section">
+                    <div class="series-poster-wrapper">
+                        <div class="series-poster-placeholder">
+                            ${info.cover ? `<img src="${dataService.getAbsoluteCoverPath(info.cover)}" alt="${info.judul}" class="series-poster-image" loading="lazy">` : `<svg class="series-poster-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                         </svg>`}
                         </div>
                     </div>
                     
-                    <div class="flex-1 series-info-section">
-                        <h1 class="text-3xl font-bold mb-4 series-title">${info.judul}</h1>
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-600 mb-4 series-metadata">
-                            <div class="flex items-center series-author">
-                                <span class="material-icons text-sm mr-1 align-middle">person</span>
+                    <div class="series-info-section">
+                        <h1 class="series-title-detail">${info.judul}</h1>
+                        <div class="series-metadata">
+                            <div class="series-author">
+                                <span class="material-icons">person</span>
                                 ${info.penulis}
                             </div>
-                            <div class="flex items-center series-release-date">
-                                <span class="material-icons text-sm mr-1 align-middle">calendar_today</span>
+                            <div class="series-release-date">
+                                <span class="material-icons">calendar_today</span>
                                 ${info.rilis}
                             </div>
-                            <div class="flex items-center series-genre">
-                                <span class="material-icons text-sm mr-1">label</span>
+                            <div class="series-genre">
+                                <span class="material-icons">label</span>
                                 ${info.genre}
                             </div>
-                            <div class="flex items-center series-status">
-                                <span class="material-icons text-sm mr-1">info</span>
+                            <div class="series-status">
+                                <span class="material-icons">info</span>
                                 ${info.status}
                             </div>
                         </div>
                         
                         <div class="series-synopsis">
-                            <h3 class="text-xl font-semibold mb-3">Sinopsis</h3>
-                            <p class="mb-4">${info.deskripsi}</p>
+                            <h3>Sinopsis</h3>
+                            <p>${info.deskripsi}</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="prose max-w-none series-volumes-section">
-                    <h3 class="text-xl font-semibold mb-3">Volume Terkait</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 volumes-grid">
+                <div class="series-volumes-section">
+                    <h3>Volume Terkait</h3>
+                    <div class="volumes-grid">
                         ${volumesHtml}
                     </div>
                 </div>
@@ -333,49 +333,46 @@ const uiService = {
         let chapterContentHtml = '';
         chapterData.konten.forEach(item => {
             if (item.paragraf) {
-                chapterContentHtml += `<p class="mb-4 chapter-paragraph">${item.paragraf}</p>`;
+                chapterContentHtml += `<p class="chapter-paragraph">${item.paragraf}</p>`;
             } else if (item.gambar) {
                 chapterContentHtml += `
-                    <div class="my-6 text-center chapter-image-wrapper">
-                        <img src="${dataService.getChapterImagePath(appState.currentSeriesId, appState.currentVolumeId, item.gambar)}" alt="Gambar ilustrasi" class="max-w-full h-auto mx-auto rounded-lg shadow-md chapter-image" loading="lazy">
+                    <div class="chapter-image-wrapper">
+                        <img src="${dataService.getChapterImagePath(appState.currentSeriesId, appState.currentVolumeId, item.gambar)}" alt="Gambar ilustrasi" class="chapter-image" loading="lazy">
                     </div>
                 `;
             } else if (item.kutipan) {
                 chapterContentHtml += `
-                    <blockquote class="border-l-4 border-gray-300 pl-4 py-2 my-4 italic text-gray-700 chapter-quote">
+                    <blockquote class="chapter-quote">
                         "${item.kutipan}"
                     </blockquote>
                 `;
             } else if (item.dialog) {
                 let dialogHtml = '';
                 item.dialog.forEach(d => {
-                    dialogHtml += `<p class="mb-2 chapter-dialog-line"><strong class="text-blue-700 chapter-dialog-character">${d.karakter}:</strong> <span class="chapter-dialog-speech">${d.ucapan}</span></p>`;
+                    dialogHtml += `<p class="chapter-dialog-line"><strong class="chapter-dialog-character">${d.karakter}:</strong> <span class="chapter-dialog-speech">${d.ucapan}</span></p>`;
                 });
-                chapterContentHtml += `<div class="bg-gray-50 p-4 rounded-lg my-4 chapter-dialog-block">${dialogHtml}</div>`;
+                chapterContentHtml += `<div class="chapter-dialog-block">${dialogHtml}</div>`;
             }
         });
         
         const prevButton = chapterIndex > 0 ? 
-            `<button onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex - 1})" class="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded chapter-nav-button chapter-nav-prev">
-                <span class="material-icons mr-2">arrow_back</span>
+            `<button onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex - 1})" class="chapter-nav-button chapter-nav-prev">
+                <span class="material-icons">arrow_back</span>
                 Bab Sebelumnya
             </button>` : '';
         
         const nextButton = chapterIndex < totalChapters - 1 ? 
-            `<button onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex + 1})" class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded chapter-nav-button chapter-nav-next">
+            `<button onclick="navigationService.goToChapter('${appState.currentSeriesId}', '${appState.currentVolumeId}', ${chapterIndex + 1})" class="chapter-nav-button chapter-nav-next">
                 Bab Selanjutnya
-                <span class="material-icons ml-2">arrow_forward</span>
+                <span class="material-icons">arrow_forward</span>
             </button>` : '';
         
         const contentHtml = `
-            <div class="chapter-navigation-top">
-            </div>
-            
             <div class="chapter-content-wrapper">
-                <h2 class="text-2xl font-semibold mb-4 chapter-title">${chapterData.judul}</h2>
+                <h2 class="chapter-title-page">${chapterData.judul}</h2>
                 ${chapterContentHtml}
                 
-                <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 chapter-navigation-bottom">
+                <div class="chapter-navigation-bottom">
                     <div>${prevButton}</div>
                     <div>${nextButton}</div>
                 </div>
@@ -501,7 +498,7 @@ const app = {
         DOMElements.mainContent.style.marginLeft = '0';
         DOMElements.mainAppHeader.style.left = '0';
         document.body.classList.remove('toc-active');
-        DOMElements.overlay.classList.add('hidden');
+        DOMElements.overlay.classList.remove('active');
 
         if (appState.isMobile) {
             DOMElements.mainContent.classList.add('main-mobile-full');
@@ -510,9 +507,11 @@ const app = {
             if (DOMElements.tocSidebar) {
                 if (appState.isTocSidebarOpen) {
                     DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
-                    DOMElements.overlay.classList.remove('hidden');
+                    DOMElements.tocSidebar.classList.add('active');
+                    DOMElements.overlay.classList.add('active');
                 } else {
                     DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+                    DOMElements.tocSidebar.classList.remove('active');
                 }
             }
         } else {
@@ -521,12 +520,14 @@ const app = {
 
             if (appState.currentView === 'volume-read' && DOMElements.tocSidebar) {
                 DOMElements.tocSidebar.classList.remove('toc-sidebar-hidden');
+                DOMElements.tocSidebar.classList.add('active');
                 DOMElements.mainContent.style.marginLeft = '256px';
                 DOMElements.mainAppHeader.style.left = '256px';
                 document.body.classList.add('toc-active');
             } else {
                 if (DOMElements.tocSidebar) {
                     DOMElements.tocSidebar.classList.add('toc-sidebar-hidden');
+                    DOMElements.tocSidebar.classList.remove('active');
                 }
             }
         }
