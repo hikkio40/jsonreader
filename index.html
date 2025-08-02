@@ -4,31 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Json Library</title>
+    <!-- Menghapus tautan CDN Tailwind CSS -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Menggunakan stylesheet yang diperbarui tanpa Tailwind -->
     <link rel="stylesheet" href="/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="app-container">
+<body class="app-body">
     <!-- Header Utama Aplikasi -->
     <header id="mainAppHeader" class="app-header">
-        <div class="header-inner">
-            <div class="header-left">
-                <button id="sidebarToggle" class="sidebar-toggle">
-                    <span class="material-icons">menu</span>
+        <div class="app-header-container">
+            <div class="app-header-left">
+                <button id="sidebarToggle" class="sidebar-toggle-button md-hidden">
+                    <span class="material-icons text-icon">menu</span>
                 </button>
-                <h1 id="mainTitle" class="main-title">Json Library</h1>
+                <h1 id="mainTitle" class="app-title">Json Library</h1>
             </div>
             <!-- Navigasi Utama dan Kotak Pencarian -->
-            <div class="header-right">
-                <nav class="header-main-nav">
-                    <a href="#">Tentang</a>
-                    <a href="#">Kontak</a>
-                    <a href="#">Kebijakan Privasi</a>
+            <div class="app-header-right">
+                <nav class="header-main-nav md-flex">
+                    <a href="#" class="header-nav-link">Tentang</a>
+                    <a href="#" class="header-nav-link">Kontak</a>
+                    <a href="#" class="header-nav-link">Kebijakan Privasi</a>
                 </nav>
                 <!-- Kotak Pencarian -->
-                <div class="search-box-container">
+                <div class="search-container">
                     <input type="text" placeholder="Cari..." class="search-input">
                     <span class="material-icons search-icon">search</span>
                 </div>
@@ -43,7 +42,7 @@
     <main id="mainContent" class="main-content-wrapper">
         <div class="dynamic-content-area" id="dynamicContent">
             <!-- Konten akan dimuat secara dinamis di sini -->
-            <div class="loading-message">
+            <div class="loading-state">
                 <p>Memuat konten...</p>
             </div>
         </div>
@@ -51,11 +50,12 @@
 
     <!-- Footer Aplikasi -->
     <footer class="app-footer">
-        <div class="container">
+        <div class="app-footer-container">
             &copy; 2025 Json Library. All rights reserved.
         </div>
     </footer>
 
+    <!-- Menggunakan script yang diperbarui tanpa Tailwind -->
     <script src="/script.js"></script>
 </body>
 </html>
