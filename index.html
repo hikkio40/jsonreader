@@ -4,52 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Json Library</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-white text-black font-sans app-container flex flex-col min-h-screen">
+<body class="app-container">
     <!-- Header Utama Aplikasi -->
-    <header id="mainAppHeader" class="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 py-3 px-4 z-40 transition-all duration-300 ease-in-out">
-        <div class="max-w-6xl mx-auto w-full flex items-center justify-between">
-            <div class="flex items-center">
-                <button id="sidebarToggle" class="p-2 hover:bg-gray-100 rounded md:hidden">
-                    <span class="material-icons text-xl">menu</span>
+    <header id="mainAppHeader" class="app-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <button id="sidebarToggle" class="sidebar-toggle">
+                    <span class="material-icons">menu</span>
                 </button>
-                <h1 id="mainTitle" class="text-xl font-semibold ml-4 md:ml-0">Json Library</h1>
+                <h1 id="mainTitle" class="main-title">Json Library</h1>
             </div>
             <!-- Navigasi Utama dan Kotak Pencarian -->
-            <div class="flex items-center space-x-4">
-                <nav class="hidden md:flex space-x-4 header-main-nav">
-                    <a href="#" class="text-gray-600 hover:text-black">Tentang</a>
-                    <a href="#" class="text-gray-600 hover:text-black">Kontak</a>
-                    <a href="#" class="text-gray-600 hover:text-black">Kebijakan Privasi</a>
+            <div class="header-right">
+                <nav class="header-main-nav">
+                    <a href="#">Tentang</a>
+                    <a href="#">Kontak</a>
+                    <a href="#">Kebijakan Privasi</a>
                 </nav>
                 <!-- Kotak Pencarian -->
-                <div class="relative">
-                    <input type="text" placeholder="Cari..." class="pl-3 pr-10 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-32 md:w-48">
-                    <span class="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                <div class="search-box-container">
+                    <input type="text" placeholder="Cari..." class="search-input">
+                    <span class="material-icons search-icon">search</span>
                 </div>
             </div>
         </div>
     </header>
 
     <!-- Overlay untuk mobile (untuk sidebar TOC) -->
-    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden app-overlay"></div>
+    <div id="overlay" class="app-overlay"></div>
 
     <!-- Konten Utama -->
-    <main id="mainContent" class="px-3 flex-grow transition-all duration-300 ease-in-out main-content-wrapper">
-        <div class="max-w-6xl mx-auto py-8 dynamic-content-area" id="dynamicContent">
+    <main id="mainContent" class="main-content-wrapper">
+        <div class="dynamic-content-area" id="dynamicContent">
             <!-- Konten akan dimuat secara dinamis di sini -->
-            <div class="text-center py-10">
-                <p class="text-gray-500">Memuat konten...</p>
+            <div class="loading-message">
+                <p>Memuat konten...</p>
             </div>
         </div>
     </main>
 
     <!-- Footer Aplikasi -->
-    <footer class="app-footer text-gray-600 text-center py-4 text-sm mt-auto">
-        <div class="container mx-auto px-4">
+    <footer class="app-footer">
+        <div class="container">
             &copy; 2025 Json Library. All rights reserved.
         </div>
     </footer>
